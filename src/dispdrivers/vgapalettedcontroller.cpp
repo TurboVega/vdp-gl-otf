@@ -180,7 +180,7 @@ void VGAPalettedController::setResolution(VGATimings const& timings, int viewPor
 }
 
 
-void VGAPalettedController::onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow)
+void VGAPalettedController::onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow, int frameRow)
 {
   if (isVisible) {
     buffer->buf = (uint8_t *) m_lines[visibleRow % m_linesCount];

@@ -155,7 +155,7 @@ private:
   void allocateViewPort();
   void freeViewPort();
   void checkViewPortSize();
-  void onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow);
+  void onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow, int frameRow);
 
   // Maximum time (in CPU cycles) available for primitives drawing
   volatile uint32_t           m_primitiveExecTimeoutCycles;

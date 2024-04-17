@@ -325,7 +325,7 @@ protected:
   void setDMABufferView(int index, int row, int scan, volatile uint8_t * * viewPort, bool onVisibleDMA);
   void setDMABufferView(int index, int row, int scan, bool isStartOfVertFrontPorch);
 
-  virtual void onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow) = 0;
+  virtual void onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow, int frameRow) = 0;
 
   void volatile * getDMABuffer(int index, int * length);
 

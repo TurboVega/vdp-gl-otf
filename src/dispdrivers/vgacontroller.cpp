@@ -120,7 +120,7 @@ void VGAController::setResolution(VGATimings const& timings, int viewPortWidth, 
 }
 
 
-void VGAController::onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow)
+void VGAController::onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow, int frameRow)
 {
   // generate interrupt at the beginning of vertical front porch
   if (isStartOfVertFrontPorch)

@@ -199,7 +199,7 @@ private:
   void init();
 
   void allocateViewPort();
-  void onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow);
+  void onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow, int frameRow);
 
   // methods to get lambdas to get/set pixels
   std::function<uint8_t(RGB888 const &)> getPixelLambda(PaintMode mode);

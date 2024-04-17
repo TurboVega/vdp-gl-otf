@@ -650,13 +650,13 @@ void VGABaseController::setDMABufferBlank(int index, void volatile * address, in
   m_DMABuffers[index].size   = size;
   m_DMABuffers[index].length = length;
   m_DMABuffers[index].buf    = (uint8_t*) address;
-  onSetupDMABuffer(&m_DMABuffers[index], isStartOfVertFrontPorch, scan, false, 0);
+  onSetupDMABuffer(&m_DMABuffers[index], isStartOfVertFrontPorch, scan, false, 0, index);
   if (m_doubleBufferOverDMA && isDoubleBuffered()) {
     m_DMABuffersVisible[index].eof    = 0;
     m_DMABuffersVisible[index].size   = size;
     m_DMABuffersVisible[index].length = length;
     m_DMABuffersVisible[index].buf    = (uint8_t*) address;
-    onSetupDMABuffer(&m_DMABuffersVisible[index], isStartOfVertFrontPorch, scan, false, 0);
+    onSetupDMABuffer(&m_DMABuffersVisible[index], isStartOfVertFrontPorch, scan, false, 0, index);
   }
 }
 
@@ -691,11 +691,11 @@ void VGABaseController::setDMABufferView(int index, int row, int scan, bool isSt
 {
   setDMABufferView(index, row, scan, m_viewPort, false);
   if (!isMultiScanBlackLine(scan))
-    onSetupDMABuffer(&m_DMABuffers[index], isStartOfVertFrontPorch, scan, true, row);
+    onSetupDMABuffer(&m_DMABuffers[index], isStartOfVertFrontPorch, scan, true, row, index);
   if (isDoubleBuffered()) {
     setDMABufferView(index, row, scan, m_viewPortVisible, true);
     if (!isMultiScanBlackLine(scan))
-      onSetupDMABuffer(&m_DMABuffersVisible[index], isStartOfVertFrontPorch, scan, true, row);
+      onSetupDMABuffer(&m_DMABuffersVisible[index], isStartOfVertFrontPorch, scan, true, row, index);
   }
 }
 
