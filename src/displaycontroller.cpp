@@ -160,7 +160,7 @@ Sprite::Sprite()
   framesCount             = 0;
   savedBackgroundWidth    = 0;
   savedBackgroundHeight   = 0;
-  savedBackground         = nullptr; // allocated or reallocated when bitmaps are added
+//  savedBackground         = nullptr; // allocated or reallocated when bitmaps are added
   savedX                  = 0;
   savedY                  = 0;
   collisionDetectorObject = nullptr;
@@ -174,7 +174,7 @@ Sprite::Sprite()
 Sprite::~Sprite()
 {
   free(frames);
-  free(savedBackground);
+//  free(savedBackground);
 }
 
 
@@ -648,6 +648,7 @@ void BitmappedDisplayController::setSprites(Sprite * sprites, int count, int spr
   m_spriteSize   = spriteSize;
   m_spritesCount = count;
 
+/*
   // allocates background buffer
   if (!isDoubleBuffered()) {
     uint8_t * spritePtr = (uint8_t*)m_sprites;
@@ -660,6 +661,7 @@ void BitmappedDisplayController::setSprites(Sprite * sprites, int count, int spr
         sprite->savedBackground = (uint8_t*) realloc(sprite->savedBackground, reqBackBufferSize);
     }
   }
+*/
   resumeBackgroundPrimitiveExecution();
   Primitive p(PrimitiveCmd::RefreshSprites);
   addPrimitive(p);
@@ -681,6 +683,7 @@ void BitmappedDisplayController::refreshSprites()
 
 void IRAM_ATTR BitmappedDisplayController::hideSprites(Rect & updateRect)
 {
+/*
   if (!m_spritesHidden) {
     m_spritesHidden = true;
 
@@ -715,11 +718,13 @@ void IRAM_ATTR BitmappedDisplayController::hideSprites(Rect & updateRect)
       mouseSprite->savedBackgroundWidth = mouseSprite->savedBackgroundHeight = 0;
     }
   }
+*/
 }
 
 
 void IRAM_ATTR BitmappedDisplayController::showSprites(Rect & updateRect)
 {
+/*
   if (m_spritesHidden) {
     m_spritesHidden = false;
     auto options = paintState().paintOptions;
@@ -768,6 +773,7 @@ void IRAM_ATTR BitmappedDisplayController::showSprites(Rect & updateRect)
 
     paintState().paintOptions = options;
   }
+*/
 }
 
 
@@ -789,8 +795,8 @@ void BitmappedDisplayController::setMouseCursor(Cursor * cursor)
       m_mouseCursor.addBitmap(&cursor->bitmap);
       m_mouseCursor.visible = true;
       m_mouseCursor.moveBy(-m_mouseHotspotX, -m_mouseHotspotY);
-      if (!isDoubleBuffered())
-        m_mouseCursor.savedBackground = (uint8_t*) realloc(m_mouseCursor.savedBackground, cursor->bitmap.width * getBitmapSavePixelSize() * cursor->bitmap.height);
+//      if (!isDoubleBuffered())
+//        m_mouseCursor.savedBackground = (uint8_t*) realloc(m_mouseCursor.savedBackground, cursor->bitmap.width * getBitmapSavePixelSize() * cursor->bitmap.height);
     }
     refreshSprites();
   }

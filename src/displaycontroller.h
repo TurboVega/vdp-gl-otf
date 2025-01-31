@@ -635,7 +635,7 @@ struct Sprite {
   int16_t            savedY;
   int16_t            savedBackgroundWidth;
   int16_t            savedBackgroundHeight;
-  uint8_t *          savedBackground;
+//  uint8_t *          savedBackground;
   QuadTreeObject *   collisionDetectorObject;
   PaintOptions       paintOptions;
   struct {
