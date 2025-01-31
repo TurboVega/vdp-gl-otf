@@ -114,7 +114,8 @@ struct VGATimings {
   VGAScanStart  HStartingBlock;  /**< Horizontal starting block. DetermineshHorizontal order of signals */
 };
 
-
+// This is used to support decorating pixels before final output.
+typedef void (*PixelDecorationCallback)(uint8_t * pixelData, uint32_t lineIndex, uint32_t lineWidth);
 
 class VGABaseController : public GenericBitmappedDisplayController {
 
@@ -289,7 +290,7 @@ public:
 
   uint8_t createBlankRawPixel()                  { return m_HVSync; }
 
-
+  void setPixelDecorationCallback(PixelDecorationCallback p_Decorator) { this->p_Decorator = p_Decorator; }
 
 protected:
 
@@ -336,6 +337,8 @@ protected:
   // abstract method of BitmappedDisplayController
   virtual void swapBuffers();
 
+  // chance to overwrite a scan line in the output DMA buffer
+  virtual void decorateScanLinePixels(uint8_t * pixels);
 
   // when double buffer is enabled the "drawing" view port is always m_viewPort, while the "visible" view port is always m_viewPortVisible
   // when double buffer is not enabled then m_viewPort = m_viewPortVisible
@@ -358,6 +361,18 @@ protected:
   // contains H and V signals for visible line
   volatile uint8_t       m_HVSync;
 
+  volatile uint8_t * *        m_lines;
+
+  // optimization: clones of m_viewPort and m_viewPortVisible
+  static volatile uint8_t * * s_viewPort;
+  static volatile uint8_t * * s_viewPortVisible;
+
+  static lldesc_t volatile *  s_frameResetDesc;
+  static volatile int         s_scanLine;
+  static volatile int         s_scanRow;
+  static volatile int         s_scanWidth;
+
+  static volatile PixelDecorationCallback p_Decorator;
 
 private:
 

@@ -53,6 +53,13 @@ namespace fabgl {
   volatile uint64_t s_vgapalctrlcycles = 0;
 #endif
 
+volatile uint8_t * * VGABaseController::s_viewPort;
+volatile uint8_t * * VGABaseController::s_viewPortVisible;
+lldesc_t volatile *  VGABaseController::s_frameResetDesc;
+volatile int         VGABaseController::s_scanLine;
+volatile int         VGABaseController::s_scanRow;
+volatile int         VGABaseController::s_scanWidth;
+volatile PixelDecorationCallback VGABaseController::p_Decorator;
 
 
 VGABaseController::VGABaseController()
@@ -99,6 +106,7 @@ void VGABaseController::begin(gpio_num_t red1GPIO, gpio_num_t red0GPIO, gpio_num
 
   RGB222::lowBitOnly = false;
   m_bitsPerChannel = 2;
+  p_Decorator = nullptr;
 }
 
 
@@ -121,6 +129,7 @@ void VGABaseController::end()
       m_isr_handle = nullptr;
     }
     freeBuffers();
+    p_Decorator = nullptr;
   }
 }
 
@@ -391,6 +400,7 @@ void VGABaseController::setResolution(VGATimings const& timings, int viewPortWid
   m_viewPortRow = m_viewPortRow & ~3;
 
   m_rawFrameHeight = m_timings.VVisibleArea + m_timings.VFrontPorch + m_timings.VSyncPulse + m_timings.VBackPorch;
+  s_scanWidth = m_viewPortWidth;
 
   // allocate DMA descriptors
   setDMABuffersCount(calcRequiredDMABuffersCount(m_viewPortHeight));
@@ -754,6 +764,13 @@ void IRAM_ATTR VGABaseController::swapBuffers()
 }
 
 
+// chance to overwrite a scan line in the output DMA buffer
+// this function expects s_scanRow to be set!
+void IRAM_ATTR VGABaseController::decorateScanLinePixels(uint8_t * pixels) {
+  if (p_Decorator) {
+    (*p_Decorator)(pixels, s_scanRow, s_scanWidth);
+  }
+}
 
 
 } // end of namespace
