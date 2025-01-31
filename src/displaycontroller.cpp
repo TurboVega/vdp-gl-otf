@@ -158,8 +158,8 @@ Sprite::Sprite()
   currentFrame            = 0;
   frames                  = nullptr;
   framesCount             = 0;
-  savedBackgroundWidth    = 0;
-  savedBackgroundHeight   = 0;
+//  savedBackgroundWidth    = 0;
+//  savedBackgroundHeight   = 0;
 //  savedBackground         = nullptr; // allocated or reallocated when bitmaps are added
   savedX                  = 0;
   savedY                  = 0;
@@ -773,6 +773,62 @@ void IRAM_ATTR BitmappedDisplayController::showSprites(Rect & updateRect)
 
     paintState().paintOptions = options;
   }
+*/
+}
+extern "C" { uint32_t hits; }
+
+void BitmappedDisplayController::drawSpriteScanLine(uint8_t * pixelData, int scanRow, int scanWidth, int viewportHeight) {
+    // normal sprites
+    int spritesCnt = spritesCount();
+    for (int i = 0; i < spritesCnt; ++i) {
+    hits|=2;
+      Sprite * sprite = getSprite(i);
+      if (sprite->visible && sprite->allowDraw && sprite->getFrame()) {
+    hits|=4;
+
+        auto spriteFrame = sprite->getFrame();
+        if (!spriteFrame) continue;
+        int spriteWidth = spriteFrame->width;
+        int spriteHeight = spriteFrame->height;
+
+        int spriteY = sprite->y;
+        int spriteYend = spriteY + spriteHeight;
+        if (scanRow < spriteY) continue;
+        if (scanRow >= spriteYend) continue;
+        int lineIndex = scanRow - spriteY;
+
+        int spriteX = sprite->x;
+        if (spriteX >= scanWidth) continue;
+        int spriteXend = spriteX + spriteWidth;
+        if (spriteXend < 0) continue;
+
+        int offsetX = (spriteX < 0 ? -spriteX : 0);
+        int drawWidth = (spriteXend > scanWidth ? scanWidth - spriteX : spriteWidth);
+
+        memcpy(pixelData + spriteX, spriteFrame->data, spriteWidth);
+
+        sprite->savedX = spriteX;
+        sprite->savedY = spriteY;
+        if (sprite->isStatic)
+          sprite->allowDraw = false;
+      }
+    }
+/*
+    // mouse cursor sprite
+    Sprite * mouseSprite = mouseCursor();
+    if (mouseSprite->visible && mouseSprite->getFrame()) {
+      // save sprite X and Y so other threads can change them without interfering
+      int spriteX = mouseSprite->x;
+      int spriteY = mouseSprite->y;
+      Bitmap const * bitmap = mouseSprite->getFrame();
+      int bitmapWidth  = bitmap->width;
+      int bitmapHeight = bitmap->height;
+      paintState().paintOptions = PaintOptions();
+      absDrawBitmap(spriteX, spriteY, bitmap, mouseSprite->savedBackground, true);
+      mouseSprite->savedX = spriteX;
+      mouseSprite->savedY = spriteY;
+      updateRect = updateRect.merge(Rect(spriteX, spriteY, spriteX + bitmapWidth - 1, spriteY + bitmapHeight - 1));
+    }
 */
 }
 

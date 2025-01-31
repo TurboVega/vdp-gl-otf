@@ -114,8 +114,6 @@ struct VGATimings {
   VGAScanStart  HStartingBlock;  /**< Horizontal starting block. DetermineshHorizontal order of signals */
 };
 
-// This is used to support decorating pixels before final output.
-typedef void (*PixelDecorationCallback)(uint8_t * pixelData, uint32_t lineIndex, uint32_t lineWidth);
 
 class VGABaseController : public GenericBitmappedDisplayController {
 
@@ -290,8 +288,6 @@ public:
 
   uint8_t createBlankRawPixel()                  { return m_HVSync; }
 
-  void setPixelDecorationCallback(PixelDecorationCallback p_Decorator) { this->p_Decorator = p_Decorator; }
-
 protected:
 
   static void setupGPIO(gpio_num_t gpio, int bit, gpio_mode_t mode);
@@ -371,8 +367,8 @@ protected:
   static volatile int         s_scanLine;
   static volatile int         s_scanRow;
   static volatile int         s_scanWidth;
+  static volatile int         s_viewPortHeight;
 
-  static volatile PixelDecorationCallback p_Decorator;
 
 private:
 

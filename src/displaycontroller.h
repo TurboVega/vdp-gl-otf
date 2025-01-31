@@ -633,8 +633,8 @@ struct Sprite {
   int16_t            currentFrame;
   int16_t            savedX;
   int16_t            savedY;
-  int16_t            savedBackgroundWidth;
-  int16_t            savedBackgroundHeight;
+//  int16_t            savedBackgroundWidth;
+//  int16_t            savedBackgroundHeight;
 //  uint8_t *          savedBackground;
   QuadTreeObject *   collisionDetectorObject;
   PaintOptions       paintOptions;
@@ -1095,9 +1095,15 @@ protected:
 
   int spritesCount() { return m_spritesCount; }
 
-  void hideSprites(Rect & updateRect);
+  void hideSprites(Rect & updateRect); // deprecated
 
-  void showSprites(Rect & updateRect);
+  void showSprites(Rect & updateRect); // deprecated
+
+  void hideSprites(); // deprecated
+
+  void showSprites(); // deprecated
+
+  void drawSpriteScanLine(uint8_t * pixelData, int scanRow, int scanWidth, int viewportHeight);
 
   void drawBitmap(BitmapDrawingInfo const & bitmapDrawingInfo, Rect & updateRect);
 
