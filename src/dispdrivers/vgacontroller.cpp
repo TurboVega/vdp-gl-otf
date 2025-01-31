@@ -61,7 +61,6 @@ namespace fabgl {
 
 VGAController * VGAController::s_instance = nullptr;
 
-
 VGAController::VGAController()
 {
   s_instance = this;

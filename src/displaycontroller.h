@@ -816,6 +816,7 @@ protected:
   int16_t          m_screenHeight;
   volatile int16_t m_viewPortWidth;
   volatile int16_t m_viewPortHeight;
+  volatile int16_t m_physicalScanLines; // normally equals m_viewPortHeight, but not for OTF
 };
 
 

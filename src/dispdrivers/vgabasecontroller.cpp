@@ -356,6 +356,9 @@ void VGABaseController::setResolution(char const * modeline, int viewPortWidth, 
     setResolution(timings, viewPortWidth, viewPortHeight, doubleBuffered);
 }
 
+void VGABaseController::setNumScanLines() {
+  m_physicalScanLines = m_viewPortHeight;
+}
 
 void VGABaseController::setResolution(VGATimings const& timings, int viewPortWidth, int viewPortHeight, bool doubleBuffered)
 {
@@ -381,6 +384,7 @@ void VGABaseController::setResolution(VGATimings const& timings, int viewPortWid
 
   // adjust view port size if necessary
   checkViewPortSize();
+  setNumScanLines();
 
   // need to center viewport?
   m_viewPortCol = (m_timings.HVisibleArea - m_viewPortWidth) / 2;
@@ -421,8 +425,9 @@ void VGABaseController::allocateViewPort(uint32_t allocCaps, int rowlen)
 {
   int linesCount[FABGLIB_VIEWPORT_MEMORY_POOL_COUNT]; // where store number of lines for each pool
   int poolsCount = 0; // number of allocated pools
-  int remainingLines = m_viewPortHeight;
-  m_viewPortHeight = 0; // m_viewPortHeight needs to be recalculated
+  int workingHeight = min(m_physicalScanLines, m_viewPortHeight);
+  int remainingLines = workingHeight;
+  workingHeight = 0; // workingHeight needs to be recalculated
 
   if (isDoubleBuffered())
     remainingLines *= 2;
@@ -438,29 +443,36 @@ void VGABaseController::allocateViewPort(uint32_t allocCaps, int rowlen)
     if (m_viewPortMemoryPool[poolsCount] == nullptr)
       break;
     remainingLines -= linesCount[poolsCount];
-    m_viewPortHeight += linesCount[poolsCount];
+    workingHeight += linesCount[poolsCount];
     ++poolsCount;
   }
   m_viewPortMemoryPool[poolsCount] = nullptr;
 
   // fill m_viewPort[] with line pointers
   if (isDoubleBuffered()) {
-    m_viewPortHeight /= 2;
-    m_viewPortVisible = (volatile uint8_t * *) heap_caps_malloc(sizeof(uint8_t*) * m_viewPortHeight, MALLOC_CAP_32BIT | MALLOC_CAP_INTERNAL);
+    workingHeight /= 2;
+    m_viewPortVisible = (volatile uint8_t * *) heap_caps_malloc(sizeof(uint8_t*) * workingHeight, MALLOC_CAP_32BIT | MALLOC_CAP_INTERNAL);
   }
-  m_viewPort = (volatile uint8_t * *) heap_caps_malloc(sizeof(uint8_t*) * m_viewPortHeight, MALLOC_CAP_32BIT | MALLOC_CAP_INTERNAL);
+  m_viewPort = (volatile uint8_t * *) heap_caps_malloc(sizeof(uint8_t*) * workingHeight, MALLOC_CAP_32BIT | MALLOC_CAP_INTERNAL);
   if (!isDoubleBuffered())
     m_viewPortVisible = m_viewPort;
   for (int p = 0, l = 0; p < poolsCount; ++p) {
     uint8_t * pool = m_viewPortMemoryPool[p];
     for (int i = 0; i < linesCount[p]; ++i) {
-      if (l + i < m_viewPortHeight)
+      if (l + i < workingHeight)
         m_viewPort[l + i] = pool;
       else
-        m_viewPortVisible[l + i - m_viewPortHeight] = pool; // set only when double buffered is enabled
+        m_viewPortVisible[l + i - workingHeight] = pool; // set only when double buffered is enabled
       pool += rowlen;
     }
     l += linesCount[p];
+  }
+
+  // Might need to adjust m_viewPortHeight
+  if ((m_physicalScanLines == m_viewPortHeight) &&
+      (workingHeight < m_physicalScanLines)) {
+    m_viewPortHeight = workingHeight;
+    m_physicalScanLines = workingHeight;
   }
 }
 
@@ -676,7 +688,7 @@ void VGABaseController::setDMABufferView(int index, int row, int scan, volatile 
   if (isMultiScanBlackLine(scan))
     bufferPtr = (uint8_t *) (m_HBlankLine + m_HLineSize - m_timings.HVisibleArea);  // this works only when HSYNC, FrontPorch and BackPorch are at the beginning of m_HBlankLine
   else if (viewPort)
-    bufferPtr = (uint8_t *) viewPort[row];
+    bufferPtr = (uint8_t *) viewPort[row % m_physicalScanLines];
   lldesc_t volatile * DMABuffers = onVisibleDMA ? m_DMABuffersVisible : m_DMABuffers;
   DMABuffers[index].size   = (m_viewPortWidth + 3) & (~3);
   DMABuffers[index].length = m_viewPortWidth;

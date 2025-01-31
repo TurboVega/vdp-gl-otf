@@ -231,3 +231,8 @@
 /** Modeline for 1280x720@60Hz resolution */
 #define SVGA_1280x720_60Hz "\"1280x720@60Hz\" 74.48 1280 1468 1604 1664 720 721 724 746 +hsync +vsync"
 
+	// Modeline for 800x600@60Hz resolution, positive syncs
+	#define SVGA_800x600_60Hz_Pos "\"800x600@60Hz\" 40 800 840 968 1056 600 601 605 628 +HSync +VSync"
+
+	// Modeline for 1024x768@60Hz resolution (adjusted)
+	#define SVGA_1024x768_60Hz_Adj "\"1024x768@60Hz\" 65 1024 1056 1192 1344 768 771 777 806 -HSync -VSync"

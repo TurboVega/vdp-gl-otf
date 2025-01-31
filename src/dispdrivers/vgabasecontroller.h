@@ -332,6 +332,7 @@ protected:
   void allocateViewPort(uint32_t allocCaps, int rowlen);
   virtual void allocateViewPort() = 0;
   virtual void checkViewPortSize() { };
+  virtual void setNumScanLines();
 
   // abstract method of BitmappedDisplayController
   virtual void swapBuffers();
