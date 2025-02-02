@@ -812,7 +812,7 @@ void BitmappedDisplayController::drawSpriteScanLine(uint8_t * pixelData, int sca
         auto dst = pixelData + spriteX;
         auto src = spriteFrame->data + offsetX;
         while (drawWidth--) {
-          *dst = (*src & 0x3F) | m_HVSync;
+          *dst++ = (*src++ & 0x3F) | m_HVSync;
         }
 
         sprite->savedX = spriteX;
