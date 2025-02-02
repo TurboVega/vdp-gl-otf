@@ -39,6 +39,7 @@
 
 #pragma GCC optimize ("O2")
 
+extern void debug_log(const char* fmt, ...);
 
 namespace fabgl {
 
@@ -462,7 +463,6 @@ Bitmap::~Bitmap()
 
 int BitmappedDisplayController::queueSize = FABGLIB_DEFAULT_DISPLAYCONTROLLER_QUEUE_SIZE;
 
-
 BitmappedDisplayController::BitmappedDisplayController()
   : m_primDynMemPool(FABGLIB_PRIMITIVES_DYNBUFFERS_SIZE)
 {
@@ -470,6 +470,7 @@ BitmappedDisplayController::BitmappedDisplayController()
   m_backgroundPrimitiveExecutionEnabled = true;
   m_sprites                             = nullptr;
   m_spritesCount                        = 0;
+  debug_log("\n %p 473 ** set m_spritesCount to %i\n",this, m_spritesCount);
   m_doubleBuffered                      = false;
   m_mouseCursor.visible                 = false;
   m_backgroundPrimitiveTimeoutEnabled   = true;
@@ -647,6 +648,7 @@ void BitmappedDisplayController::setSprites(Sprite * sprites, int count, int spr
   m_sprites      = sprites;
   m_spriteSize   = spriteSize;
   m_spritesCount = count;
+  debug_log("\n %p 651 ** set m_spritesCount to %i\n", this, m_spritesCount);
 
 /*
   // allocates background buffer
@@ -775,11 +777,13 @@ void IRAM_ATTR BitmappedDisplayController::showSprites(Rect & updateRect)
   }
 */
 }
-extern "C" { uint32_t hits; }
+extern "C" { uint32_t hits; uint32_t ptr; uint32_t hcnt;}
 
 void BitmappedDisplayController::drawSpriteScanLine(uint8_t * pixelData, int scanRow, int scanWidth, int viewportHeight) {
     // normal sprites
     int spritesCnt = spritesCount();
+    ptr=(uint32_t)this;
+    hcnt++;
     for (int i = 0; i < spritesCnt; ++i) {
     hits|=2;
       Sprite * sprite = getSprite(i);
@@ -805,7 +809,11 @@ void BitmappedDisplayController::drawSpriteScanLine(uint8_t * pixelData, int sca
         int offsetX = (spriteX < 0 ? -spriteX : 0);
         int drawWidth = (spriteXend > scanWidth ? scanWidth - spriteX : spriteWidth);
 
-        memcpy(pixelData + spriteX, spriteFrame->data, spriteWidth);
+        auto dst = pixelData + spriteX;
+        auto src = spriteFrame->data + offsetX;
+        while (drawWidth--) {
+          *dst = (*src & 0x3F) | m_HVSync;
+        }
 
         sprite->savedX = spriteX;
         sprite->savedY = spriteY;

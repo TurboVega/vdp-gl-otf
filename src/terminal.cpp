@@ -55,6 +55,7 @@
 
 #pragma GCC optimize ("O2")
 
+extern void debug_log(const char* fmt, ...);
 
 namespace fabgl {
 
@@ -4239,6 +4240,7 @@ void Terminal::freeSprites()
   delete [] m_sprites;
   m_sprites = nullptr;
   m_spritesCount = 0;
+  debug_log("\n %p ** fs set m_spritesCount to %i\n", this, m_spritesCount);
 }
 
 
@@ -4505,6 +4507,7 @@ void Terminal::consumeFabGLGraphicsSeq()
       freeSprites();
       if (count > 0) {
         m_spritesCount = count;
+  debug_log("\n ** %p term set m_spritesCount to %i\n",this, m_spritesCount);
         m_sprites = new Sprite[count];
       }
     }

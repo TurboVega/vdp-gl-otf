@@ -354,9 +354,6 @@ protected:
   volatile int16_t       m_viewPortCol;
   volatile int16_t       m_viewPortRow;
 
-  // contains H and V signals for visible line
-  volatile uint8_t       m_HVSync;
-
   volatile uint8_t * *        m_lines;
 
   // optimization: clones of m_viewPort and m_viewPortVisible

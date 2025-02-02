@@ -816,6 +816,9 @@ protected:
   int16_t          m_screenHeight;
   volatile int16_t m_viewPortWidth;
   volatile int16_t m_viewPortHeight;
+
+  // contains H and V signals for visible line
+  volatile uint8_t m_HVSync;
 };
 
 
