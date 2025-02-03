@@ -685,111 +685,26 @@ void BitmappedDisplayController::refreshSprites()
 
 void IRAM_ATTR BitmappedDisplayController::hideSprites(Rect & updateRect)
 {
-/*
-  if (!m_spritesHidden) {
-    m_spritesHidden = true;
-
-    // normal sprites
-    if (spritesCount() > 0 && !isDoubleBuffered()) {
-      // restore saved backgrounds
-      for (int i = spritesCount() - 1; i >= 0; --i) {
-        Sprite * sprite = getSprite(i);
-        if (sprite->allowDraw && sprite->savedBackgroundWidth > 0) {
-          int savedX = sprite->savedX;
-          int savedY = sprite->savedY;
-          int savedWidth  = sprite->savedBackgroundWidth;
-          int savedHeight = sprite->savedBackgroundHeight;
-          Bitmap bitmap(savedWidth, savedHeight, sprite->savedBackground, PixelFormat::Native);
-          absDrawBitmap(savedX, savedY, &bitmap, nullptr, true);
-          updateRect = updateRect.merge(Rect(savedX, savedY, savedX + savedWidth - 1, savedY + savedHeight - 1));
-          sprite->savedBackgroundWidth = sprite->savedBackgroundHeight = 0;
-        }
-      }
-    }
-
-    // mouse cursor sprite
-    Sprite * mouseSprite = mouseCursor();
-    if (mouseSprite->savedBackgroundWidth > 0) {
-      int savedX = mouseSprite->savedX;
-      int savedY = mouseSprite->savedY;
-      int savedWidth  = mouseSprite->savedBackgroundWidth;
-      int savedHeight = mouseSprite->savedBackgroundHeight;
-      Bitmap bitmap(savedWidth, savedHeight, mouseSprite->savedBackground, PixelFormat::Native);
-      absDrawBitmap(savedX, savedY, &bitmap, nullptr, true);
-      updateRect = updateRect.merge(Rect(savedX, savedY, savedX + savedWidth - 1, savedY + savedHeight - 1));
-      mouseSprite->savedBackgroundWidth = mouseSprite->savedBackgroundHeight = 0;
-    }
-  }
-*/
+  m_spritesHidden = true;
 }
 
 
 void IRAM_ATTR BitmappedDisplayController::showSprites(Rect & updateRect)
 {
-/*
-  if (m_spritesHidden) {
-    m_spritesHidden = false;
-    auto options = paintState().paintOptions;
-
-    // normal sprites
-    // save backgrounds and draw sprites
-    for (int i = 0; i < spritesCount(); ++i) {
-      Sprite * sprite = getSprite(i);
-      if (sprite->visible && sprite->allowDraw && sprite->getFrame()) {
-        // save sprite X and Y so other threads can change them without interferring
-        int spriteX = sprite->x;
-        int spriteY = sprite->y;
-        Bitmap const * bitmap = sprite->getFrame();
-        int bitmapWidth  = bitmap->width;
-        int bitmapHeight = bitmap->height;
-        paintState().paintOptions = sprite->paintOptions;
-        absDrawBitmap(spriteX, spriteY, bitmap, sprite->savedBackground, true);
-        sprite->savedX = spriteX;
-        sprite->savedY = spriteY;
-        sprite->savedBackgroundWidth  = bitmapWidth;
-        sprite->savedBackgroundHeight = bitmapHeight;
-        if (sprite->isStatic)
-          sprite->allowDraw = false;
-        updateRect = updateRect.merge(Rect(spriteX, spriteY, spriteX + bitmapWidth - 1, spriteY + bitmapHeight - 1));
-      }
-    }
-
-    // mouse cursor sprite
-    // save backgrounds and draw mouse cursor
-    Sprite * mouseSprite = mouseCursor();
-    if (mouseSprite->visible && mouseSprite->getFrame()) {
-      // save sprite X and Y so other threads can change them without interferring
-      int spriteX = mouseSprite->x;
-      int spriteY = mouseSprite->y;
-      Bitmap const * bitmap = mouseSprite->getFrame();
-      int bitmapWidth  = bitmap->width;
-      int bitmapHeight = bitmap->height;
-      paintState().paintOptions = PaintOptions();
-      absDrawBitmap(spriteX, spriteY, bitmap, mouseSprite->savedBackground, true);
-      mouseSprite->savedX = spriteX;
-      mouseSprite->savedY = spriteY;
-      mouseSprite->savedBackgroundWidth  = bitmapWidth;
-      mouseSprite->savedBackgroundHeight = bitmapHeight;
-      updateRect = updateRect.merge(Rect(spriteX, spriteY, spriteX + bitmapWidth - 1, spriteY + bitmapHeight - 1));
-    }
-
-    paintState().paintOptions = options;
-  }
-*/
+  m_spritesHidden = false;
 }
-extern "C" { uint32_t hits; uint32_t ptr; uint32_t hcnt;}
 
 void BitmappedDisplayController::drawSpriteScanLine(uint8_t * pixelData, int scanRow, int scanWidth, int viewportHeight) {
+    if (m_spritesHidden) return;
+
     // normal sprites
+    pixelData[13]=((0x30) & 0x3F) | m_HVSync;
     int spritesCnt = spritesCount();
-    ptr=(uint32_t)this;
-    hcnt++;
     for (int i = 0; i < spritesCnt; ++i) {
-    hits|=2;
+    pixelData[23]=((0x0C) & 0x3F) | m_HVSync;
       Sprite * sprite = getSprite(i);
       if (sprite->visible && sprite->allowDraw && sprite->getFrame()) {
-    hits|=4;
-
+    pixelData[35]=((0x03) & 0x3F) | m_HVSync;
         auto spriteFrame = sprite->getFrame();
         if (!spriteFrame) continue;
         int spriteWidth = spriteFrame->width;
@@ -807,18 +722,57 @@ void BitmappedDisplayController::drawSpriteScanLine(uint8_t * pixelData, int sca
         if (spriteXend < 0) continue;
 
         int offsetX = (spriteX < 0 ? -spriteX : 0);
-        int drawWidth = (spriteXend > scanWidth ? scanWidth - spriteX : spriteWidth);
+        int drawWidth =
+          (spriteXend > scanWidth ?
+            scanWidth - spriteX :
+            spriteWidth - offsetX);
 
-        auto dst = pixelData + spriteX;
-        auto src = spriteFrame->data + offsetX;
-        while (drawWidth--) {
-          *dst++ = (*src++ & 0x3F) | m_HVSync;
+        auto src = spriteFrame->data + offsetX; // ? * format ?
+        auto pos = spriteX + offsetX;
+
+        switch (spriteFrame->format) {
+
+          case PixelFormat::Undefined:
+            break;
+
+          case PixelFormat::Native:
+            while (drawWidth--) {
+              *pixelData++ = ((0x30) & 0x3F) | m_HVSync;
+            }
+            break;
+
+          case PixelFormat::Mask:
+            while (drawWidth--) {
+              *pixelData++ = ((0x0C) & 0x3F) | m_HVSync;
+            }
+            break;
+
+          case PixelFormat::RGBA2222:
+            while (drawWidth--) {
+              pixelData[pos ^ 2] = ((0x03) & 0x3F) | m_HVSync;
+              pos++;
+            }
+            break;
+
+          case PixelFormat::RGBA8888:
+            while (drawWidth--) {
+              auto r = *src++;
+              auto g = *src++;
+              auto b = *src++;
+              auto a = *src++;
+              pixelData[pos ^ 2] = ((r & 0x03) |
+                ((g & 0x3) << 2) |
+                ((b & 0x3) << 4) |
+                m_HVSync);
+              pos++;
+            }
+            break;
         }
 
         sprite->savedX = spriteX;
         sprite->savedY = spriteY;
-        if (sprite->isStatic)
-          sprite->allowDraw = false;
+        //if (sprite->isStatic)
+        //  sprite->allowDraw = false;
       }
     }
 /*
