@@ -685,28 +685,28 @@ void BitmappedDisplayController::refreshSprites()
 
 void IRAM_ATTR BitmappedDisplayController::hideSprites(Rect & updateRect)
 {
-  m_spritesHidden = true;
+  //m_spritesHidden = true;
 }
 
 
 void IRAM_ATTR BitmappedDisplayController::showSprites(Rect & updateRect)
 {
-  m_spritesHidden = false;
+  //m_spritesHidden = false;
 }
 
 void BitmappedDisplayController::drawSpriteScanLine(uint8_t * pixelData, int scanRow, int scanWidth, int viewportHeight) {
-    if (m_spritesHidden) return;
+    //if (m_spritesHidden) return;
 
     // normal sprites
     pixelData[13]=((0x30) & 0x3F) | m_HVSync;
     int spritesCnt = spritesCount();
     for (int i = 0; i < spritesCnt; ++i) {
-    pixelData[23]=((0x0C) & 0x3F) | m_HVSync;
+      pixelData[23]=((0x0C) & 0x3F) | m_HVSync;
       Sprite * sprite = getSprite(i);
       if (sprite->visible && sprite->allowDraw && sprite->getFrame()) {
-    pixelData[35]=((0x03) & 0x3F) | m_HVSync;
+        pixelData[35]=((0x03) & 0x3F) | m_HVSync;
+
         auto spriteFrame = sprite->getFrame();
-        if (!spriteFrame) continue;
         int spriteWidth = spriteFrame->width;
         int spriteHeight = spriteFrame->height;
 
@@ -714,7 +714,7 @@ void BitmappedDisplayController::drawSpriteScanLine(uint8_t * pixelData, int sca
         int spriteYend = spriteY + spriteHeight;
         if (scanRow < spriteY) continue;
         if (scanRow >= spriteYend) continue;
-        int lineIndex = scanRow - spriteY;
+        int offsetY = scanRow - spriteY;
 
         int spriteX = sprite->x;
         if (spriteX >= scanWidth) continue;
@@ -727,52 +727,17 @@ void BitmappedDisplayController::drawSpriteScanLine(uint8_t * pixelData, int sca
             scanWidth - spriteX :
             spriteWidth - offsetX);
 
-        auto src = spriteFrame->data + offsetX; // ? * format ?
+        auto src = spriteFrame->data + (offsetY * spriteWidth) + offsetX;
         auto pos = spriteX + offsetX;
 
-        switch (spriteFrame->format) {
-
-          case PixelFormat::Undefined:
-            break;
-
-          case PixelFormat::Native:
-            while (drawWidth--) {
-              *pixelData++ = ((0x30) & 0x3F) | m_HVSync;
-            }
-            break;
-
-          case PixelFormat::Mask:
-            while (drawWidth--) {
-              *pixelData++ = ((0x0C) & 0x3F) | m_HVSync;
-            }
-            break;
-
-          case PixelFormat::RGBA2222:
-            while (drawWidth--) {
-              pixelData[pos ^ 2] = ((0x03) & 0x3F) | m_HVSync;
-              pos++;
-            }
-            break;
-
-          case PixelFormat::RGBA8888:
-            while (drawWidth--) {
-              auto r = *src++;
-              auto g = *src++;
-              auto b = *src++;
-              auto a = *src++;
-              pixelData[pos ^ 2] = ((r & 0x03) |
-                ((g & 0x3) << 2) |
-                ((b & 0x3) << 4) |
-                m_HVSync);
-              pos++;
-            }
-            break;
+        while (drawWidth--) {
+          if (*src & 0xC0) {
+            //pixelData[pos ^ 2] = (*src & 0x3F) | m_HVSync;
+            pixelData[77] = 0x15 | m_HVSync;
+          }
+          src++;
+          pos++;
         }
-
-        sprite->savedX = spriteX;
-        sprite->savedY = spriteY;
-        //if (sprite->isStatic)
-        //  sprite->allowDraw = false;
       }
     }
 /*
