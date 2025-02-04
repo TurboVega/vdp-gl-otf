@@ -693,7 +693,7 @@ void IRAM_ATTR BitmappedDisplayController::showSprites(Rect & updateRect)
 {
   //m_spritesHidden = false;
 }
-extern "C" { uint32_t pix[8]; }
+extern "C" { uint32_t pix[8]; bool isset[8]; }
 void BitmappedDisplayController::drawSpriteScanLine(uint8_t * pixelData, int scanRow, int scanWidth, int viewportHeight) {
     //if (m_spritesHidden) return;
 
@@ -731,19 +731,17 @@ void BitmappedDisplayController::drawSpriteScanLine(uint8_t * pixelData, int sca
         auto pos = spriteX + offsetX;
 
         while (drawWidth--) {
-          auto word = *((uint32_t*)src);
-          if (word) {
-            int k;
-            for (k=0;k<8;k++) {
-              if (!pix[k]) {pix[k]=word;break;}
-              if (pix[k]==word) break;
-            }
+          auto word = (*((uint32_t*)src))^0xFFFFFFFF;
+          int k;
+          for (k=0;k<8;k++) {
+            if (!isset[k]) {pix[k]=word;isset[k]=true;break;}
+            if (pix[k]==word) break;
           }
 
-          if (src[0]) {
-            auto r = src[3] >> 6;
-            auto g = (src[2] >> 6) << 2;
-            auto b = (src[1] >> 6) << 4;
+          if (src[3]) {
+            auto r = src[0] >> 6;
+            auto g = (src[1] >> 6) << 2;
+            auto b = (src[2] >> 6) << 4;
             pixelData[pos ^ 2] = r | g | b | m_HVSync;
 
           }
