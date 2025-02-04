@@ -719,7 +719,7 @@ void BitmappedDisplayController::drawSpriteScanLine(uint8_t * pixelData, int sca
         int spriteX = sprite->x;
         if (spriteX >= scanWidth) continue;
         int spriteXend = spriteX + spriteWidth;
-        if (spriteXend < 0) continue;
+        if (spriteXend <= 0) continue;
 
         int offsetX = (spriteX < 0 ? -spriteX : 0);
         int drawWidth =
@@ -727,15 +727,22 @@ void BitmappedDisplayController::drawSpriteScanLine(uint8_t * pixelData, int sca
             scanWidth - spriteX :
             spriteWidth - offsetX);
 
-        auto src = spriteFrame->data + (offsetY * spriteWidth) + offsetX;
+        auto rowLen = (spriteWidth + 7) / 8;
+        auto src = spriteFrame->data + (offsetY * rowLen * 4) + (offsetX * 4);
         auto pos = spriteX + offsetX;
 
         while (drawWidth--) {
-          if (*src & 0xC0) {
-            //pixelData[pos ^ 2] = (*src & 0x3F) | m_HVSync;
-            pixelData[77] = 0x15 | m_HVSync;
+          if (src[0] & 0xC0) {
+            /*pixelData[pos ^ 2] =
+              (src[3] >> 6) |
+              ((src[2] >> 4) & 0x0C) |
+              ((src[1] >> 2) & 0x30) |
+              m_HVSync;*/
+            pixelData[pos ^ 2] =
+              0x11 | m_HVSync;
           }
-          src++;
+          src += 4;
+          //src++;
           pos++;
         }
       }
