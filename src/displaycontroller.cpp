@@ -696,14 +696,10 @@ void IRAM_ATTR BitmappedDisplayController::showSprites(Rect & updateRect)
 
 void BitmappedDisplayController::drawSpriteScanLine(uint8_t * pixelData, int scanRow, int scanWidth, int viewportHeight) {
     // normal sprites
-    pixelData[13]=((0x30) & 0x3F) | m_HVSync;
     int spritesCnt = spritesCount();
     for (int i = 0; i < spritesCnt; ++i) {
-      pixelData[23]=((0x0C) & 0x3F) | m_HVSync;
       Sprite * sprite = getSprite(i);
       if (sprite->visible && sprite->allowDraw && sprite->getFrame()) {
-        pixelData[35]=((0x03) & 0x3F) | m_HVSync;
-
         auto spriteFrame = sprite->getFrame();
         int spriteWidth = spriteFrame->width;
         int spriteHeight = spriteFrame->height;
@@ -740,23 +736,6 @@ void BitmappedDisplayController::drawSpriteScanLine(uint8_t * pixelData, int sca
         }
       }
     }
-/*
-    // mouse cursor sprite
-    Sprite * mouseSprite = mouseCursor();
-    if (mouseSprite->visible && mouseSprite->getFrame()) {
-      // save sprite X and Y so other threads can change them without interfering
-      int spriteX = mouseSprite->x;
-      int spriteY = mouseSprite->y;
-      Bitmap const * bitmap = mouseSprite->getFrame();
-      int bitmapWidth  = bitmap->width;
-      int bitmapHeight = bitmap->height;
-      paintState().paintOptions = PaintOptions();
-      absDrawBitmap(spriteX, spriteY, bitmap, mouseSprite->savedBackground, true);
-      mouseSprite->savedX = spriteX;
-      mouseSprite->savedY = spriteY;
-      updateRect = updateRect.merge(Rect(spriteX, spriteY, spriteX + bitmapWidth - 1, spriteY + bitmapHeight - 1));
-    }
-*/
 }
 
 
