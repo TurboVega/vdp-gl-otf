@@ -1,0 +1,86 @@
+// File: VgaFrame.h - unions that describe DMA buffers for video
+// By: Curtis Whitley
+
+#pragma once
+
+#include "rom/lldesc.h"
+
+#define BUF_UNION_TAG(w, h, c)          tag_PixBuf##w##x##h##x##c
+#define BUF_UNION_NAME(w, h, c)         PixBuf##w##x##h##x##c
+#define BUF_MEMBER_NAME(w, h, c)        m_##w##x##h##x##c
+#define STRINGIZE(x)                    #x
+#define BUF_MEMBER_NAME_STR(w, h, c)    STRINGIZE(BUF_MEMBER_NAME(w, h, c))
+#define BUF_BITS_DIV(c)                 (c==2?4:(c==4?2:1))
+
+#define PIXEL_BUFFER(w, h, c) \
+    typedef union BUF_UNION_TAG(w, h, c) { \
+        uint8_t   m_8[w*h/BUF_BITS_DIV(c)]; \
+        uint16_t  m_16[w*h/BUF_BITS_DIV(c)/2]; \
+        uint32_t  m_32[w*h/BUF_BITS_DIV(c)/4]; \
+    } BUF_UNION_NAME(w, h, c);
+
+PIXEL_BUFFER(320, 200, 2)
+PIXEL_BUFFER(320, 200, 4)
+PIXEL_BUFFER(320, 200, 16)
+PIXEL_BUFFER(320, 200, 64)
+PIXEL_BUFFER(320, 240, 2)
+PIXEL_BUFFER(320, 240, 4)
+PIXEL_BUFFER(320, 240, 16)
+PIXEL_BUFFER(320, 240, 64)
+PIXEL_BUFFER(512, 384, 2)
+PIXEL_BUFFER(512, 384, 4)
+PIXEL_BUFFER(512, 384, 16)
+PIXEL_BUFFER(512, 384, 64)
+PIXEL_BUFFER(640, 240, 2)
+PIXEL_BUFFER(640, 240, 4)
+PIXEL_BUFFER(640, 240, 16)
+PIXEL_BUFFER(640, 240, 64)
+PIXEL_BUFFER(640, 480, 2)
+PIXEL_BUFFER(640, 480, 4)
+PIXEL_BUFFER(640, 480, 16)
+PIXEL_BUFFER(640, 480, 64)
+PIXEL_BUFFER(800, 600, 2)
+PIXEL_BUFFER(800, 600, 4)
+PIXEL_BUFFER(1024, 768, 2)
+PIXEL_BUFFER(1024, 768, 4)
+
+#define BUF_UNION_SIZE(w, h, c)     sizeof(BUF_UNION_NAME(w, h, c))
+#define BUF_LEFTOVER_SIZE(w, h, c)  (sizeof(FramePixels) - BUF_UNION_SIZE(w, h, c))
+
+typedef union {
+    BUF_UNION_NAME(320, 200, 2)    BUF_MEMBER_NAME(320, 200, 2);
+    BUF_UNION_NAME(320, 200, 4)    BUF_MEMBER_NAME(320, 200, 4);
+    BUF_UNION_NAME(320, 200, 16)   BUF_MEMBER_NAME(320, 200, 16);
+    BUF_UNION_NAME(320, 200, 64)   BUF_MEMBER_NAME(320, 200, 64);
+    BUF_UNION_NAME(320, 240, 2)    BUF_MEMBER_NAME(320, 240, 2);
+    BUF_UNION_NAME(320, 240, 4)    BUF_MEMBER_NAME(320, 240, 4);
+    BUF_UNION_NAME(320, 240, 16)   BUF_MEMBER_NAME(320, 240, 16);
+    BUF_UNION_NAME(320, 240, 64)   BUF_MEMBER_NAME(320, 240, 64);
+    BUF_UNION_NAME(512, 384, 2)    BUF_MEMBER_NAME(512, 384, 2);
+    BUF_UNION_NAME(512, 384, 4)    BUF_MEMBER_NAME(512, 384, 4);
+    BUF_UNION_NAME(512, 384, 16)   BUF_MEMBER_NAME(512, 384, 16);
+    BUF_UNION_NAME(512, 384, 64)   BUF_MEMBER_NAME(512, 384, 64);
+    BUF_UNION_NAME(640, 240, 2)    BUF_MEMBER_NAME(640, 240, 2);
+    BUF_UNION_NAME(640, 240, 4)    BUF_MEMBER_NAME(640, 240, 4);
+    BUF_UNION_NAME(640, 240, 16)   BUF_MEMBER_NAME(640, 240, 16);
+    BUF_UNION_NAME(640, 240, 64)   BUF_MEMBER_NAME(640, 240, 64);
+    BUF_UNION_NAME(640, 480, 2)    BUF_MEMBER_NAME(640, 480, 2);
+    BUF_UNION_NAME(640, 480, 4)    BUF_MEMBER_NAME(640, 480, 4);
+    BUF_UNION_NAME(640, 480, 16)   BUF_MEMBER_NAME(640, 480, 16);
+    BUF_UNION_NAME(640, 480, 64)   BUF_MEMBER_NAME(640, 480, 64);
+    BUF_UNION_NAME(800, 600, 2)    BUF_MEMBER_NAME(800, 600, 2);
+    BUF_UNION_NAME(800, 600, 4)    BUF_MEMBER_NAME(800, 600, 4);
+    BUF_UNION_NAME(1024, 768, 2)   BUF_MEMBER_NAME(1024, 768, 2);
+    BUF_UNION_NAME(1024, 768, 4)   BUF_MEMBER_NAME(1024, 768, 4);
+} FramePixels;
+
+
+class VgaFrame
+{
+private:
+    /* data */
+public:
+    VgaFrame();
+    ~VgaFrame();
+};
+
