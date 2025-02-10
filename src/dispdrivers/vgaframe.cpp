@@ -3,6 +3,8 @@
 
 #include "vgaframe.h"
 
+DMA_ATTR VgaFrame VgaFrame::vgaFrame;
+
 VgaFrame::VgaFrame()
 {
 }
