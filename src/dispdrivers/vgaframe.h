@@ -10,15 +10,18 @@
 #define BUF_UNION_TAG(w, h, c)          tag_PixBuf##w##x##h##x##c
 #define BUF_UNION_NAME(w, h, c)         PixBuf##w##x##h##x##c
 #define BUF_MEMBER_NAME(w, h, c)        m_##w##x##h##x##c
+#define DBL_BUF_MEMBER_NAME(w, h, c)    m_dbl_##w##x##h##x##c
 #define STRINGIZE(x)                    #x
 #define BUF_MEMBER_NAME_STR(w, h, c)    STRINGIZE(BUF_MEMBER_NAME(w, h, c))
 #define BUF_BITS_DIV(c)                 (c==2?8:(c==4?4:(c==16?2:1)))
 
+// In this union, we represent 1/8th of the lines, so we can
+// disperse them across multiple memory areas.
 #define PIXEL_BUFFER(w, h, c) \
     typedef union BUF_UNION_TAG(w, h, c) { \
-        uint8_t   m_8[w*h/BUF_BITS_DIV(c)]; \
-        uint16_t  m_16[w*h/BUF_BITS_DIV(c)/2]; \
-        uint32_t  m_32[w*h/BUF_BITS_DIV(c)/4]; \
+        uint8_t   m_8[w*h/BUF_BITS_DIV(c)/8]; \
+        uint16_t  m_16[w*h/BUF_BITS_DIV(c)/2/8]; \
+        uint32_t  m_32[w*h/BUF_BITS_DIV(c)/4/8]; \
     } BUF_UNION_NAME(w, h, c);
 
 PIXEL_BUFFER(320, 200, 2)
@@ -46,12 +49,15 @@ PIXEL_BUFFER(800, 600, 4)
 PIXEL_BUFFER(1024, 768, 2)
 PIXEL_BUFFER(1024, 768, 4)
 
-#define BUF_UNION_SIZE(w, h, c)     sizeof(BUF_UNION_NAME(w, h, c))
-#define BUF_LEFTOVER_SIZE(w, h, c)  (sizeof(FramePixels) - BUF_UNION_SIZE(w, h, c))
+#define BUF_UNION_SIZE(w, h, c)         sizeof(BUF_UNION_NAME(w, h, c))
+#define BUF_LEFTOVER_SIZE(w, h, c)      (sizeof(FramePixels) - BUF_UNION_SIZE(w, h, c))
+#define DBL_BUF_UNION_SIZE(w, h, c)     (BUF_UNION_SIZE(w, h, c)*2)
+#define DBL_BUF_LEFTOVER_SIZE(w, h, c)  (sizeof(FramePixels) - DBL_BUF_UNION_SIZE(w, h, c))
 
 // The FramePixels union is used to allocate pixel data buffers statically.
 //
-typedef union {
+typedef union tag_FramePixels {
+    // Single-buffered modes
     BUF_UNION_NAME(320, 200, 2)    BUF_MEMBER_NAME(320, 200, 2);
     BUF_UNION_NAME(320, 200, 4)    BUF_MEMBER_NAME(320, 200, 4);
     BUF_UNION_NAME(320, 200, 16)   BUF_MEMBER_NAME(320, 200, 16);
@@ -76,9 +82,31 @@ typedef union {
     BUF_UNION_NAME(800, 600, 4)    BUF_MEMBER_NAME(800, 600, 4);
     BUF_UNION_NAME(1024, 768, 2)   BUF_MEMBER_NAME(1024, 768, 2);
     BUF_UNION_NAME(1024, 768, 4)   BUF_MEMBER_NAME(1024, 768, 4);
+
+    // Double-buffered modes
+    BUF_UNION_NAME(320, 200, 2)    DBL_BUF_MEMBER_NAME(320, 200, 2)[2];
+    BUF_UNION_NAME(320, 200, 4)    DBL_BUF_MEMBER_NAME(320, 200, 4)[2];
+    BUF_UNION_NAME(320, 200, 16)   DBL_BUF_MEMBER_NAME(320, 200, 16)[2];
+    BUF_UNION_NAME(320, 200, 64)   DBL_BUF_MEMBER_NAME(320, 200, 64)[2];
+    BUF_UNION_NAME(320, 240, 2)    DBL_BUF_MEMBER_NAME(320, 240, 2)[2];
+    BUF_UNION_NAME(320, 240, 4)    DBL_BUF_MEMBER_NAME(320, 240, 4)[2];
+    BUF_UNION_NAME(320, 240, 16)   DBL_BUF_MEMBER_NAME(320, 240, 16)[2];
+    BUF_UNION_NAME(320, 240, 64)   DBL_BUF_MEMBER_NAME(320, 240, 64)[2];
+    BUF_UNION_NAME(512, 384, 2)    DBL_BUF_MEMBER_NAME(512, 384, 2)[2];
+    BUF_UNION_NAME(512, 384, 4)    DBL_BUF_MEMBER_NAME(512, 384, 4)[2];
+    BUF_UNION_NAME(512, 384, 16)   DBL_BUF_MEMBER_NAME(512, 384, 16)[2];
+    BUF_UNION_NAME(640, 240, 2)    DBL_BUF_MEMBER_NAME(640, 240, 2)[2];
+    BUF_UNION_NAME(640, 240, 4)    DBL_BUF_MEMBER_NAME(640, 240, 4)[2];
+    BUF_UNION_NAME(640, 240, 16)   DBL_BUF_MEMBER_NAME(640, 240, 16)[2];
+    BUF_UNION_NAME(640, 480, 2)    DBL_BUF_MEMBER_NAME(640, 480, 2)[2];
+    BUF_UNION_NAME(640, 480, 4)    DBL_BUF_MEMBER_NAME(640, 480, 4)[2];
+    BUF_UNION_NAME(800, 600, 2)    DBL_BUF_MEMBER_NAME(800, 600, 2)[2];
+    BUF_UNION_NAME(1024, 768, 2)   DBL_BUF_MEMBER_NAME(1024, 768, 2)[2];
 } FramePixels;
 
-typedef struct {
+typedef struct tag_VgaTiming {
+    void finishInitialization(); // call this after construction
+
     const char*     m_name;         // descriptive name of the mode
     uint32_t        m_frequency;    // clock frequency in Hz
     uint16_t        m_h_fp_at;      // pixel index of horizontal front porch
@@ -122,17 +150,28 @@ typedef struct {
     uint8_t             m_colors;   // number of colors on main screen
     uint8_t             m_legacy;   // whether the mode uses legacy timing
     uint8_t             m_double;   // whether double-buffered
+    uint32_t            m_size;     // size of the pixel buffer in FramePixels
+    uint32_t            m_remain;   // size leftover in FramePixels
     const VgaTiming&    m_timing;   // timing information for the mode
 } VgaSettings;
 
 class VgaFrame
 {
 public:
-    VgaFrame();
-    ~VgaFrame();
+    VgaFrame(); // No need to call this from the app! Use vgaFrame, below
+    ~VgaFrame(); // This will never be called
 
-private:
-    FramePixels     m_frame_pixels;
+    void finishInitialization(); // call this after construction
+    int getNumModes(); // Gets the number of distinct video modes
+    void listModes(); // Dumps list of all video modes to debug output
+
+    // Get a reference to the settings for a video mode, based on the parameters
+    const VgaSettings& getSettings(uint8_t mode, uint8_t colors, uint8_t legacy);
+
+    // Get a reference to the timing for a video mode, based on the parameters
+    // Note: if you call get_settings(), you get a reference to the timing, also
+    const VgaTiming& getTiming(uint8_t mode, uint8_t colors, uint8_t legacy);
 };
 
+// Use this global variable to access the frame.
 extern DMA_ATTR VgaFrame vgaFrame;
