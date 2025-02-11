@@ -91,14 +91,25 @@ void VgaTiming::finishInitialization() {
 }
 
 
-FramePixels m_frame_pixels_0;
-FramePixels m_frame_pixels_1;
-FramePixels m_frame_pixels_2;
-FramePixels m_frame_pixels_3;
-FramePixels m_frame_pixels_4;
-FramePixels m_frame_pixels_5;
-FramePixels m_frame_pixels_6;
-FramePixels m_frame_pixels_7;
+FramePixels frame_pixels_0;
+FramePixels frame_pixels_1;
+FramePixels frame_pixels_2;
+FramePixels frame_pixels_3;
+FramePixels frame_pixels_4;
+FramePixels frame_pixels_5;
+FramePixels frame_pixels_6;
+FramePixels frame_pixels_7;
+
+FramePixels* frame_sections[NUM_SECTIONS] = {
+    &frame_pixels_0,
+    &frame_pixels_1,
+    &frame_pixels_2,
+    &frame_pixels_3,
+    &frame_pixels_4,
+    &frame_pixels_5,
+    &frame_pixels_6,
+    &frame_pixels_7
+};
 
 VgaFrame vgaFrame;
 
@@ -143,9 +154,9 @@ void VgaFrame::listModes() {
     for (int i = 0; i < n; i++) {
         const VgaSettings& s = vgaSettings[i];
         const VgaTiming& t = s.m_timing;
-        debug_log("[%03i] mode %3hu: %15s, %2hu colors, uses %6i, leaves %6i\n",
+        debug_log("[%03i] mode %3hu: %15s, %2hu colors, section uses %6i, leaves %6i, buffer uses %6i, leaves %6i\n",
             i, s.m_mode, t.m_name, s.m_colors,
-            s.m_size, s.m_remain);
+            s.m_size, s.m_remain, s.m_size*NUM_SECTIONS, s.m_remain*NUM_SECTIONS);
     }
 }
 
@@ -163,4 +174,8 @@ const VgaSettings& VgaFrame::getSettings(uint8_t mode, uint8_t colors, uint8_t l
 const VgaTiming& VgaFrame::getTiming(uint8_t mode, uint8_t colors, uint8_t legacy) {
     const VgaSettings& s = getSettings(mode, colors, legacy);
     return s.m_timing;
+}
+
+FramePixels& VgaFrame::getSection(int index) {
+    return *frame_sections[index];
 }

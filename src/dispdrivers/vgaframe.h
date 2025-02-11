@@ -14,14 +14,15 @@
 #define STRINGIZE(x)                    #x
 #define BUF_MEMBER_NAME_STR(w, h, c)    STRINGIZE(BUF_MEMBER_NAME(w, h, c))
 #define BUF_BITS_DIV(c)                 (c==2?8:(c==4?4:(c==16?2:1)))
+#define NUM_SECTIONS                    8
 
 // In this union, we represent 1/8th of the lines, so we can
 // disperse them across multiple memory areas.
 #define PIXEL_BUFFER(w, h, c) \
     typedef union BUF_UNION_TAG(w, h, c) { \
-        uint8_t   m_8[w*h/BUF_BITS_DIV(c)/8]; \
-        uint16_t  m_16[w*h/BUF_BITS_DIV(c)/2/8]; \
-        uint32_t  m_32[w*h/BUF_BITS_DIV(c)/4/8]; \
+        uint8_t   m_8[w*h/BUF_BITS_DIV(c)/NUM_SECTIONS]; \
+        uint16_t  m_16[w*h/BUF_BITS_DIV(c)/2/NUM_SECTIONS]; \
+        uint32_t  m_32[w*h/BUF_BITS_DIV(c)/4/NUM_SECTIONS]; \
     } BUF_UNION_NAME(w, h, c);
 
 PIXEL_BUFFER(320, 200, 2)
@@ -169,6 +170,9 @@ public:
     // Get a reference to the timing for a video mode, based on the parameters
     // Note: if you call get_settings(), you get a reference to the timing, also
     const VgaTiming& getTiming(uint8_t mode, uint8_t colors, uint8_t legacy);
+
+    // Get a reference to one section of frame pixels
+    FramePixels& getSection(int index);
 };
 
 // Use this global variable to access the frame.
