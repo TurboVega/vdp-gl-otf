@@ -173,6 +173,15 @@ public:
 
     // Get a reference to one section of frame pixels
     FramePixels& getSection(int index);
+
+    // Set the video mode using the given parameters
+    void setMode(uint8_t mode, uint8_t colors, uint8_t legacy);
+
+    // Stop the video output
+    void stopVideo();
+
+    // Start the video output
+    void startVideo();
 };
 
 // Use this global variable to access the frame.

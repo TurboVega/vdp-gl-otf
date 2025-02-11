@@ -2,6 +2,12 @@
 // By: Curtis Whitley
 
 #include "vgaframe.h"
+#include <string.h>
+
+#define MAX_TOTAL_LINES     806     // includes active, vfp, vs, and vbp
+#define MAX_ACTIVE_PIXELS   1024
+#define MAX_BLANKING_PIXELS 320
+#define NUM_OUTPUT_LINES    8       // DMA pixels to be sent out
 
 void debug_log(const char* fmt, ...);
 
@@ -24,7 +30,6 @@ static VgaTiming SVGA_960x540_60Hz {"960x540@60Hz", 37260000, 960, 976, 1008, 11
 static VgaTiming SVGA_1024x768_60Hz {"1024x768@60Hz", 65000000, 1024, 1048, 1184, 1344, 768, 771, 777, 806, HSNEG, VSNEG};
 static VgaTiming SVGA_1024x768_70Hz {"1024x768@70Hz", 75000000, 1024, 1048, 1184, 1328, 768, 771, 777, 806, HSNEG, VSNEG};
 static VgaTiming SVGA_1024x768_75Hz {"1024x768@75Hz", 78800000, 1024, 1040, 1136, 1312, 768, 769, 772, 800, HSPOS, VSPOS};
-static VgaTiming SVGA_1280x720_60Hz {"1280x720@60Hz", 74480000, 1280, 1468, 1604, 1664, 720, 721, 724, 746, HSPOS, VSPOS};
 
 static const VgaSettings vgaSettings[] = {
     {  0,   2, OLD, SGL, BUF_UNION_SIZE(1024, 768, 2), BUF_LEFTOVER_SIZE(1024, 768, 2), SVGA_1024x768_60Hz },
@@ -88,6 +93,9 @@ void VgaTiming::finishInitialization() {
     m_v_fp = m_v_sync_at - m_v_fp_at;
     m_v_sync = m_v_bp_at - m_v_sync_at;
     m_v_bp = m_v_total - m_v_bp_at;
+
+    m_h_sync_bit <<= 7;
+    m_v_sync_bit <<= 6;
 }
 
 
@@ -112,7 +120,13 @@ FramePixels* frame_sections[NUM_SECTIONS] = {
 };
 
 VgaFrame vgaFrame;
-
+DMA_ATTR lldesc_t dmaDescr[MAX_TOTAL_LINES];
+DMA_ATTR uint32_t blankActive[MAX_ACTIVE_PIXELS/4];
+DMA_ATTR uint32_t hsOnly[MAX_BLANKING_PIXELS/4];
+DMA_ATTR uint32_t vsOnly[MAX_BLANKING_PIXELS/4];
+DMA_ATTR uint32_t hsvs[MAX_BLANKING_PIXELS/4];
+const VgaSettings* curSettings;
+const VgaTiming* curTiming;
 
 VgaFrame::VgaFrame()
 {
@@ -146,7 +160,6 @@ void VgaFrame::finishInitialization() {
     SVGA_1024x768_60Hz.finishInitialization();
     SVGA_1024x768_70Hz.finishInitialization();
     SVGA_1024x768_75Hz.finishInitialization();
-    SVGA_1280x720_60Hz.finishInitialization();
 }
 
 void VgaFrame::listModes() {
@@ -176,10 +189,47 @@ const VgaSettings& VgaFrame::getSettings(uint8_t mode, uint8_t colors, uint8_t l
 }
 
 const VgaTiming& VgaFrame::getTiming(uint8_t mode, uint8_t colors, uint8_t legacy) {
-    const VgaSettings& s = getSettings(mode, colors, legacy);
+    const VgaSettings& s = getSettings(mode, colors, legacy);        const VgaTiming& t = s.m_timing;
+
     return s.m_timing;
 }
 
 FramePixels& VgaFrame::getSection(int index) {
     return *frame_sections[index];
+}
+
+void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
+    stopVideo();
+    curSettings = &getSettings(mode, colors, legacy);
+    curTiming = &curSettings->m_timing;
+
+    // Initialize the blanking area buffers
+    uint8_t hvSync = (curTiming->m_h_sync_bit << 7) | (curTiming->m_v_sync_bit << 6);
+
+    memset(blankActive, 0, MAX_ACTIVE_PIXELS);
+
+    memset(hsOnly, 0, curTiming->m_h_fp);
+    memset(((uint8_t*)hsOnly)+(curTiming->m_h_fp), curTiming->m_h_sync_bit, curTiming->m_h_sync);
+    memset(((uint8_t*)hsOnly)+(curTiming->m_h_fp + curTiming->m_h_sync), 0, curTiming->m_h_bp);
+
+    memset(vsOnly, curTiming->m_v_sync_bit, curTiming->m_h_fp + curTiming->m_h_sync + curTiming->m_h_bp);
+
+    memset(hsvs, curTiming->m_v_sync_bit, curTiming->m_h_fp);
+    memset(((uint8_t*)hsvs)+(curTiming->m_h_fp), curTiming->m_h_sync_bit | curTiming->m_v_sync_bit, curTiming->m_h_sync);
+    memset(((uint8_t*)hsvs)+(curTiming->m_h_fp + curTiming->m_h_sync), curTiming->m_v_sync_bit, curTiming->m_h_bp);
+
+    for (uint16_t s = 0; s < NUM_SECTIONS; s++) {
+        memset(&getSection(s), 0, (curTiming->m_h_active * curTiming->m_v_active) / 8);
+    }
+}
+
+void VgaFrame::stopVideo() {
+    if (curSettings) {
+        curSettings = nullptr;
+        curTiming = nullptr;
+    }
+}
+
+void VgaFrame::startVideo() {
+
 }
