@@ -154,9 +154,13 @@ void VgaFrame::listModes() {
     for (int i = 0; i < n; i++) {
         const VgaSettings& s = vgaSettings[i];
         const VgaTiming& t = s.m_timing;
-        debug_log("[%03i] mode %3hu: %15s, %2hu colors, section uses %6i, leaves %6i, buffer uses %6i, leaves %6i\n",
+        debug_log("[%03i] mode %3hu: %15s, %2hu colors,"
+            " section uses %6i, leaves %6i, buffer uses %6i, leaves %6i,"
+            " H %hu/%hu/%hu/%hu, V %hu/%hu/%hu/%hu\n",
             i, s.m_mode, t.m_name, s.m_colors,
-            s.m_size, s.m_remain, s.m_size*NUM_SECTIONS, s.m_remain*NUM_SECTIONS);
+            s.m_size, s.m_remain, s.m_size*NUM_SECTIONS, s.m_remain*NUM_SECTIONS,
+            t.m_h_active, t.m_h_fp, t.m_h_sync, t.m_h_bp,
+            t.m_v_active, t.m_v_fp, t.m_v_sync, t.m_v_bp);
     }
 }
 
