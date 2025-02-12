@@ -116,8 +116,8 @@ typedef struct tag_VgaTiming {
     uint16_t        m_v_sync_at;    // line index of vertical sync
     uint16_t        m_v_bp_at;      // line index of vertical back porch
     uint16_t        m_v_total;      // total vertical lines per frame
-    uint8_t         m_h_sync_bit;   // whether HS is positive (vs negative)
-    uint8_t         m_v_sync_bit;   // whether VS is positive (vs negative)
+    uint8_t         m_h_sync_on;    // output bit mask for when HS is on
+    uint8_t         m_v_sync_on;    // output bit mask for when VS is on
     uint8_t         m_mul_scan;     // multiplier for scan lines
     uint8_t         m_mul_blank;    // whether extra lines are blank
     uint16_t        m_h_active;     // horizontal active pixels
@@ -128,19 +128,27 @@ typedef struct tag_VgaTiming {
     uint16_t        m_v_fp;         // vertical front porch pixels
     uint16_t        m_v_sync;       // vertical sync pixels
     uint16_t        m_v_bp;         // vertical back porch pixels
+    uint8_t         m_h_sync_off;   // output bit mask for when HS is off
+    uint8_t         m_v_sync_off;   // output bit mask for when VS is off
+    uint8_t         m_hv_sync_on;   // combination of H & V sync bits when on
+    uint8_t         m_hv_sync_off;  // combination of H & V sync bits when off
+    uint32_t        m_hv_sync_4_on;   // combination of H & V sync bits when on (4 pixels)
+    uint32_t        m_hv_sync_4_off;  // combination of H & V sync bits when off (4 pixels)
 } VgaTiming;
 
-#define HSNEG       0   // HS negative
-#define HSPOS       1   // HS positive
-#define VSNEG       0   // VS negative
-#define VSPOS       1   // VS positive
-#define SGL         1   // single-scan (or single-buffered)
-#define DBL         2   // double-scan (or double-buffered)
-#define QUAD        4   // quad-scan
-#define DUP         1   // multi-scan duplicate
-#define MSB         1   // multi-scan blank
-#define OLD         1   // legacy indicator
-#define NEW         0   // non-legacy indicator
+#define HSBIT       0x80    // bit indicating value of HS
+#define VSBIT       0x40    // bit indicating value of VS
+#define HSNEG       0x00    // HS negative
+#define HSPOS       HSBIT   // HS positive
+#define VSNEG       0x00    // VS negative
+#define VSPOS       VSBIT   // VS positive
+#define SGL         1       // single-scan (or single-buffered)
+#define DBL         2       // double-scan (or double-buffered)
+#define QUAD        4       // quad-scan
+#define DUP         1       // multi-scan duplicate
+#define MSB         1       // multi-scan blank
+#define OLD         1       // legacy indicator
+#define NEW         0       // non-legacy indicator
 
 // The VgaSettings structure identifies key information about each video mode.
 //
@@ -182,6 +190,9 @@ public:
 
     // Start the video output
     void startVideo();
+
+    // Clear the drawable frame buffer
+    void clearScreen();
 };
 
 // Use this global variable to access the frame.

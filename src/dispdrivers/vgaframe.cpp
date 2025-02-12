@@ -7,6 +7,7 @@
 #define MAX_TOTAL_LINES     806     // includes active, vfp, vs, and vbp
 #define MAX_ACTIVE_PIXELS   1024
 #define MAX_BLANKING_PIXELS 320
+#define MAX_TOTAL_PIXELS    (MAX_ACTIVE_PIXELS + MAX_BLANKING_PIXELS)
 #define NUM_OUTPUT_LINES    8       // DMA pixels to be sent out
 
 void debug_log(const char* fmt, ...);
@@ -94,8 +95,22 @@ void VgaTiming::finishInitialization() {
     m_v_sync = m_v_bp_at - m_v_sync_at;
     m_v_bp = m_v_total - m_v_bp_at;
 
-    m_h_sync_bit <<= 7;
-    m_v_sync_bit <<= 6;
+    m_h_sync_off = m_h_sync_on ^ HSBIT;
+    m_v_sync_off = m_v_sync_on ^ VSBIT;
+    m_hv_sync_on = m_h_sync_on | m_v_sync_on;
+    m_hv_sync_off = m_h_sync_off | m_v_sync_off;
+
+    m_hv_sync_4_on = 
+        ((uint32_t)m_h_sync_on) |
+        (((uint32_t)m_h_sync_on) << 8) |
+        (((uint32_t)m_h_sync_on) << 16) |
+        (((uint32_t)m_h_sync_on) << 24);
+
+    m_hv_sync_4_off = 
+        ((uint32_t)m_h_sync_off) |
+        (((uint32_t)m_h_sync_off) << 8) |
+        (((uint32_t)m_h_sync_off) << 16) |
+        (((uint32_t)m_h_sync_off) << 24);
 }
 
 
@@ -120,11 +135,29 @@ FramePixels* frame_sections[NUM_SECTIONS] = {
 };
 
 VgaFrame vgaFrame;
+
 DMA_ATTR lldesc_t dmaDescr[MAX_TOTAL_LINES];
-DMA_ATTR uint32_t blankActive[MAX_ACTIVE_PIXELS/4];
-DMA_ATTR uint32_t hsOnly[MAX_BLANKING_PIXELS/4];
-DMA_ATTR uint32_t vsOnly[MAX_BLANKING_PIXELS/4];
-DMA_ATTR uint32_t hsvs[MAX_BLANKING_PIXELS/4];
+
+DMA_ATTR union {
+    uint32_t w[MAX_TOTAL_PIXELS/4];
+    uint8_t  b[MAX_TOTAL_PIXELS];
+} blankActive;
+
+DMA_ATTR union {
+    uint32_t w[MAX_TOTAL_PIXELS/4];
+    uint8_t  b[MAX_TOTAL_PIXELS];
+} blankActiveVS;
+
+DMA_ATTR union {
+    uint32_t w[MAX_BLANKING_PIXELS/4];
+    uint8_t  b[MAX_BLANKING_PIXELS];
+} activePad;
+
+DMA_ATTR union {
+    uint32_t w[MAX_ACTIVE_PIXELS/4];
+    uint32_t b[MAX_ACTIVE_PIXELS];
+} outputLines[NUM_OUTPUT_LINES];
+
 const VgaSettings* curSettings;
 const VgaTiming* curTiming;
 
@@ -169,10 +202,12 @@ void VgaFrame::listModes() {
         const VgaTiming& t = s.m_timing;
         debug_log("[%03i] mode %3hu: %15s, %2hu colors,"
             " section uses %6i, leaves %6i, buffer uses %6i, leaves %6i,"
-            " H %hu/%hu/%hu/%hu, V %hu/%hu/%hu/%hu\n",
+            " H%c %hu/%hu/%hu/%hu, V%c %hu/%hu/%hu/%hu\n",
             i, s.m_mode, t.m_name, s.m_colors,
             s.m_size, s.m_remain, s.m_size*NUM_SECTIONS, s.m_remain*NUM_SECTIONS,
+            (t.m_h_sync_on ? '+' : '-'),
             t.m_h_active, t.m_h_fp, t.m_h_sync, t.m_h_bp,
+            (t.m_v_sync_on ? '+' : '-'),
             t.m_v_active, t.m_v_fp, t.m_v_sync, t.m_v_bp);
     }
 }
@@ -202,25 +237,37 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
     stopVideo();
     curSettings = &getSettings(mode, colors, legacy);
     curTiming = &curSettings->m_timing;
+    auto t = curTiming;
 
     // Initialize the blanking area buffers
-    uint8_t hvSync = (curTiming->m_h_sync_bit << 7) | (curTiming->m_v_sync_bit << 6);
 
-    memset(blankActive, 0, MAX_ACTIVE_PIXELS);
+    // Entire blank line with VS off
+    // [active pixels][hfp][hs][hbp]
+    memset(blankActive.b, t->m_hv_sync_off, t->m_h_active);
+    memset(&blankActive.b[t->m_h_fp_at], t->m_hv_sync_off, t->m_h_fp);
+    memset(&blankActive.b[t->m_h_sync_at], t->m_h_sync_on, t->m_h_sync);
+    memset(&blankActive.b[t->m_h_bp_at], t->m_hv_sync_off, t->m_h_bp);
 
-    memset(hsOnly, 0, curTiming->m_h_fp);
-    memset(((uint8_t*)hsOnly)+(curTiming->m_h_fp), curTiming->m_h_sync_bit, curTiming->m_h_sync);
-    memset(((uint8_t*)hsOnly)+(curTiming->m_h_fp + curTiming->m_h_sync), 0, curTiming->m_h_bp);
+    // Entire blank line with VS on
+    // [active pixels][hfp][hs][hbp]
+    memset(blankActiveVS.b, t->m_v_sync_on, t->m_h_active);
+    memset(&blankActiveVS.b[t->m_h_fp_at], t->m_v_sync_on, t->m_h_fp);
+    memset(&blankActiveVS.b[t->m_h_sync_at], t->m_hv_sync_on, t->m_h_sync);
+    memset(&blankActiveVS.b[t->m_h_bp_at], t->m_v_sync_on, t->m_h_bp);
 
-    memset(vsOnly, curTiming->m_v_sync_bit, curTiming->m_h_fp + curTiming->m_h_sync + curTiming->m_h_bp);
+    // Active pad when VS is off
+    // [hfp][hs][hbp]
+    memset(activePad.b, t->m_hv_sync_off, t->m_h_fp);
+    memset(&activePad.b[t->m_h_fp], t->m_h_sync_on, t->m_h_sync);
+    memset(&activePad.b[t->m_h_fp + t->m_h_sync], t->m_hv_sync_off, t->m_h_bp);
 
-    memset(hsvs, curTiming->m_v_sync_bit, curTiming->m_h_fp);
-    memset(((uint8_t*)hsvs)+(curTiming->m_h_fp), curTiming->m_h_sync_bit | curTiming->m_v_sync_bit, curTiming->m_h_sync);
-    memset(((uint8_t*)hsvs)+(curTiming->m_h_fp + curTiming->m_h_sync), curTiming->m_v_sync_bit, curTiming->m_h_bp);
-
-    for (uint16_t s = 0; s < NUM_SECTIONS; s++) {
-        memset(&getSection(s), 0, (curTiming->m_h_active * curTiming->m_v_active) / 8);
+    // Output lines
+    for (uint16_t line = 0; line < NUM_OUTPUT_LINES; line++) {
+        memset(outputLines[line].b, t->m_hv_sync_off, t->m_h_active);
     }
+
+    // Drawing frame area
+    clearScreen();
 }
 
 void VgaFrame::stopVideo() {
@@ -232,4 +279,12 @@ void VgaFrame::stopVideo() {
 
 void VgaFrame::startVideo() {
 
+}
+
+void VgaFrame::clearScreen() {
+    auto sect_size =
+        ((uint32_t)curTiming->m_h_active * (uint32_t)curTiming->m_v_active) / NUM_SECTIONS;
+    for (uint16_t s = 0; s < NUM_SECTIONS; s++) {
+        memset(&getSection(s), 0, sect_size);
+    }
 }
