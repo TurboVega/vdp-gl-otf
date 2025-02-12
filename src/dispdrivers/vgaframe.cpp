@@ -13,6 +13,12 @@
 #define MAX_TOTAL_LINES     806     // includes active, vfp, vs, and vbp
 #define MAX_ACTIVE_PIXELS   1024
 #define MAX_BLANKING_PIXELS 320
+/*
+#define MAX_TOTAL_LINES     229     // includes active, vfp, vs, and vbp
+#define MAX_ACTIVE_PIXELS   408
+#define MAX_BLANKING_PIXELS 29
+*/
+
 #define MAX_TOTAL_PIXELS    (MAX_ACTIVE_PIXELS + MAX_BLANKING_PIXELS)
 #define NUM_OUTPUT_LINES    8       // DMA pixels to be sent out; must be a power of 2!
 
@@ -379,14 +385,14 @@ void VgaTiming::finishInitialization() {
 }
 
 
-FramePixels frame_pixels_0;
-FramePixels frame_pixels_1;
-FramePixels frame_pixels_2;
-FramePixels frame_pixels_3;
-FramePixels frame_pixels_4;
-FramePixels frame_pixels_5;
-FramePixels frame_pixels_6;
-FramePixels frame_pixels_7;
+__attribute__((section(".frame_pixels_0"))) FramePixels frame_pixels_0;
+__attribute__((section(".frame_pixels_1"))) FramePixels frame_pixels_1;
+__attribute__((section(".frame_pixels_2"))) FramePixels frame_pixels_2;
+__attribute__((section(".frame_pixels_3"))) FramePixels frame_pixels_3;
+__attribute__((section(".frame_pixels_4"))) FramePixels frame_pixels_4;
+__attribute__((section(".frame_pixels_5"))) FramePixels frame_pixels_5;
+__attribute__((section(".frame_pixels_6"))) FramePixels frame_pixels_6;
+__attribute__((section(".frame_pixels_7"))) FramePixels frame_pixels_7;
 
 FramePixels* frame_sections[NUM_SECTIONS] = {
     &frame_pixels_0,
@@ -528,7 +534,7 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
 
     // Output lines
     for (uint16_t line = 0; line < NUM_OUTPUT_LINES; line++) {
-        memset(outputLines[line].b, t->m_hv_sync_off, t->m_h_active);
+        memset(outputLines[line].b, t->m_hv_sync_off | 0x04, t->m_h_active);
     }
 
     // Drawing frame area

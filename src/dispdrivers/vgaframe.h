@@ -66,6 +66,7 @@ typedef union tag_FramePixels {
     BUF_UNION_NAME(320, 240, 4)    BUF_MEMBER_NAME(320, 240, 4);
     BUF_UNION_NAME(320, 240, 16)   BUF_MEMBER_NAME(320, 240, 16);
     BUF_UNION_NAME(320, 240, 64)   BUF_MEMBER_NAME(320, 240, 64);
+    /*
     BUF_UNION_NAME(512, 384, 2)    BUF_MEMBER_NAME(512, 384, 2);
     BUF_UNION_NAME(512, 384, 4)    BUF_MEMBER_NAME(512, 384, 4);
     BUF_UNION_NAME(512, 384, 16)   BUF_MEMBER_NAME(512, 384, 16);
@@ -101,6 +102,7 @@ typedef union tag_FramePixels {
     BUF_UNION_NAME(640, 480, 4)    DBL_BUF_MEMBER_NAME(640, 480, 4)[2];
     BUF_UNION_NAME(800, 600, 2)    DBL_BUF_MEMBER_NAME(800, 600, 2)[2];
     BUF_UNION_NAME(1024, 768, 2)   DBL_BUF_MEMBER_NAME(1024, 768, 2)[2];
+    */
 } FramePixels;
 
 typedef struct tag_VgaTiming {
