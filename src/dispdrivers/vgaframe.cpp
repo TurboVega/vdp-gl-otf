@@ -511,20 +511,20 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
     // [active pixels][hfp][hs][hbp]
     memset(blankLine.b, t->m_hv_sync_off, t->m_h_active);
     memset(&blankLine.b[t->m_h_fp_at], t->m_hv_sync_off, t->m_h_fp);
-    memset(&blankLine.b[t->m_h_sync_at], t->m_h_sync_on, t->m_h_sync);
+    memset(&blankLine.b[t->m_h_sync_at], t->m_h_sync_on | t->m_v_sync_off, t->m_h_sync);
     memset(&blankLine.b[t->m_h_bp_at], t->m_hv_sync_off, t->m_h_bp);
 
     // Entire blank line with VS on
     // [active pixels][hfp][hs][hbp]
-    memset(blankLineVS.b, t->m_v_sync_on, t->m_h_active);
-    memset(&blankLineVS.b[t->m_h_fp_at], t->m_v_sync_on, t->m_h_fp);
+    memset(blankLineVS.b, t->m_v_sync_on | t->m_h_sync_off, t->m_h_active);
+    memset(&blankLineVS.b[t->m_h_fp_at], t->m_v_sync_on | t->m_h_sync_off, t->m_h_fp);
     memset(&blankLineVS.b[t->m_h_sync_at], t->m_hv_sync_on, t->m_h_sync);
-    memset(&blankLineVS.b[t->m_h_bp_at], t->m_v_sync_on, t->m_h_bp);
+    memset(&blankLineVS.b[t->m_h_bp_at], t->m_v_sync_on | t->m_h_sync_off, t->m_h_bp);
 
     // Active pad when VS is off
     // [hfp][hs][hbp]
     memset(activePad.b, t->m_hv_sync_off, t->m_h_fp);
-    memset(&activePad.b[t->m_h_fp], t->m_h_sync_on, t->m_h_sync);
+    memset(&activePad.b[t->m_h_fp], t->m_h_sync_on | t->m_v_sync_off, t->m_h_sync);
     memset(&activePad.b[t->m_h_fp + t->m_h_sync], t->m_hv_sync_off, t->m_h_bp);
 
     // Output lines
