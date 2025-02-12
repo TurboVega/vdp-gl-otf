@@ -12,13 +12,8 @@
 
 #define MAX_TOTAL_LINES     806     // includes active, vfp, vs, and vbp
 #define MAX_ACTIVE_PIXELS   1024
+#define MAX_ACTIVE_LINES    768
 #define MAX_BLANKING_PIXELS 320
-/*
-#define MAX_TOTAL_LINES     229     // includes active, vfp, vs, and vbp
-#define MAX_ACTIVE_PIXELS   408
-#define MAX_BLANKING_PIXELS 29
-*/
-
 #define MAX_TOTAL_PIXELS    (MAX_ACTIVE_PIXELS + MAX_BLANKING_PIXELS)
 #define NUM_OUTPUT_LINES    8       // DMA pixels to be sent out; must be a power of 2!
 
@@ -407,7 +402,7 @@ FramePixels* frame_sections[NUM_SECTIONS] = {
 
 VgaFrame vgaFrame;
 
-DMA_ATTR lldesc_t dmaDescr[MAX_TOTAL_LINES];
+DMA_ATTR lldesc_t dmaDescr[MAX_TOTAL_LINES + MAX_ACTIVE_LINES];
 
 DMA_ATTR union {
     uint32_t w[MAX_TOTAL_PIXELS/4];
