@@ -3,12 +3,63 @@
 
 #include "vgaframe.h"
 #include <string.h>
+#include "soc/i2s_struct.h"
+#include "soc/i2s_reg.h"
+#include "driver/periph_ctrl.h"
+#include "soc/rtc.h"
+#include "driver/gpio.h"
+#include "soc/io_mux_reg.h"
 
 #define MAX_TOTAL_LINES     806     // includes active, vfp, vs, and vbp
 #define MAX_ACTIVE_PIXELS   1024
 #define MAX_BLANKING_PIXELS 320
 #define MAX_TOTAL_PIXELS    (MAX_ACTIVE_PIXELS + MAX_BLANKING_PIXELS)
 #define NUM_OUTPUT_LINES    8       // DMA pixels to be sent out; must be a power of 2!
+
+#define GPIO_RED_0    GPIO_NUM_21
+#define GPIO_RED_1    GPIO_NUM_22
+#define GPIO_GREEN_0  GPIO_NUM_18
+#define GPIO_GREEN_1  GPIO_NUM_19
+#define GPIO_BLUE_0   GPIO_NUM_4
+#define GPIO_BLUE_1   GPIO_NUM_5
+#define GPIO_HSYNC    GPIO_NUM_23
+#define GPIO_VSYNC    GPIO_NUM_15
+
+#define VS0 0
+#define VS1 1
+#define HS0 0
+#define HS1 1
+#define R0  0
+#define R1  1
+#define R2  2
+#define R3  3
+#define G0  0
+#define G1  1
+#define G2  2
+#define G3  3
+#define B0  0
+#define B1  1
+#define B2  2
+#define B3  3
+
+#define VGA_RED_BIT    0
+#define VGA_GREEN_BIT  2
+#define VGA_BLUE_BIT   4
+#define VGA_HSYNC_BIT  6
+#define VGA_VSYNC_BIT  7
+
+#define MASK_RGB(r,g,b) (((r)<<VGA_RED_BIT)|((g)<<VGA_GREEN_BIT)|((b)<<VGA_BLUE_BIT))
+
+// This formula handles arranging the pixel bytes in the correct DMA order.
+// 0x12345678, normally stored as 78, 56, 34, 12, is sent as 34 12 78 56.
+#define FIX_INDEX(idx)      ((idx)^2)
+
+struct APLLParams {
+  uint8_t sdm0;
+  uint8_t sdm1;
+  uint8_t sdm2;
+  uint8_t o_div;
+};
 
 void debug_log(const char* fmt, ...);
 
@@ -81,6 +132,220 @@ static const VgaSettings vgaSettings[] = {
     { 151,  2, NEW, DBL, DBL_BUF_UNION_SIZE(512, 384, 2), DBL_BUF_LEFTOVER_SIZE(512, 384, 2), VGA_512x384_60Hz }
 };
 
+template <typename T>
+const T & tmax(const T & a, const T & b)
+{
+  return (a < b) ? b : a;
+}
+
+template <typename T>
+const T & tmin(const T & a, const T & b)
+{
+  return !(b < a) ? a : b;
+}
+
+// definitions:
+//   apll_clk = XTAL * (4 + sdm2 + sdm1 / 256 + sdm0 / 65536) / (2 * o_div + 4)
+//     dividend = XTAL * (4 + sdm2 + sdm1 / 256 + sdm0 / 65536)
+//     divisor  = (2 * o_div + 4)
+//   freq = apll_clk / (2 + b / a)        => assumes  tx_bck_div_num = 1 and clkm_div_num = 2
+// Other values range:
+//   sdm0  0..255
+//   sdm1  0..255
+//   sdm2  0..63
+//   o_div 0..31
+// Assume xtal = FABGLIB_XTAL (40MHz)
+// The dividend should be in the range of 350 - 500 MHz (350000000-500000000), so these are the
+// actual parameters ranges (so the minimum apll_clk is 5303030 Hz and maximum is 125000000Hz):
+//  MIN 87500000Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 0
+//  MAX 125000000Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 0
+//
+//  MIN 58333333Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 1
+//  MAX 83333333Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 1
+//
+//  MIN 43750000Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 2
+//  MAX 62500000Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 2
+//
+//  MIN 35000000Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 3
+//  MAX 50000000Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 3
+//
+//  MIN 29166666Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 4
+//  MAX 41666666Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 4
+//
+//  MIN 25000000Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 5
+//  MAX 35714285Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 5
+//
+//  MIN 21875000Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 6
+//  MAX 31250000Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 6
+//
+//  MIN 19444444Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 7
+//  MAX 27777777Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 7
+//
+//  MIN 17500000Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 8
+//  MAX 25000000Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 8
+//
+//  MIN 15909090Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 9
+//  MAX 22727272Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 9
+//
+//  MIN 14583333Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 10
+//  MAX 20833333Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 10
+//
+//  MIN 13461538Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 11
+//  MAX 19230769Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 11
+//
+//  MIN 12500000Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 12
+//  MAX 17857142Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 12
+//
+//  MIN 11666666Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 13
+//  MAX 16666666Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 13
+//
+//  MIN 10937500Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 14
+//  MAX 15625000Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 14
+//
+//  MIN 10294117Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 15
+//  MAX 14705882Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 15
+//
+//  MIN 9722222Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 16
+//  MAX 13888888Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 16
+//
+//  MIN 9210526Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 17
+//  MAX 13157894Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 17
+//
+//  MIN 8750000Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 18
+//  MAX 12500000Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 18
+//
+//  MIN 8333333Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 19
+//  MAX 11904761Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 19
+//
+//  MIN 7954545Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 20
+//  MAX 11363636Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 20
+//
+//  MIN 7608695Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 21
+//  MAX 10869565Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 21
+//
+//  MIN 7291666Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 22
+//  MAX 10416666Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 22
+//
+//  MIN 7000000Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 23
+//  MAX 10000000Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 23
+//
+//  MIN 6730769Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 24
+//  MAX 9615384Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 24
+//
+//  MIN 6481481Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 25
+//  MAX 9259259Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 25
+//
+//  MIN 6250000Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 26
+//  MAX 8928571Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 26
+//
+//  MIN 6034482Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 27
+//  MAX 8620689Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 27
+//
+//  MIN 5833333Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 28
+//  MAX 8333333Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 28
+//
+//  MIN 5645161Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 29
+//  MAX 8064516Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 29
+//
+//  MIN 5468750Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 30
+//  MAX 7812500Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 30
+//
+//  MIN 5303030Hz - sdm0 = 0 sdm1 = 192 sdm2 = 4 o_div = 31
+//  MAX 7575757Hz - sdm0 = 0 sdm1 = 128 sdm2 = 8 o_div = 31
+void APLLCalcParams(double freq, APLLParams * params, uint8_t * a, uint8_t * b, double * out_freq, double * error)
+{
+  double FXTAL = 40000000.0;
+
+  *error = 999999999;
+
+  double apll_freq = freq * 2;
+
+  for (int o_div = 0; o_div <= 31; ++o_div) {
+
+    int idivisor = (2 * o_div + 4);
+
+    for (int sdm2 = 4; sdm2 <= 8; ++sdm2) {
+
+      // from tables above
+      int minSDM1 = (sdm2 == 4 ? 192 : 0);
+      int maxSDM1 = (sdm2 == 8 ? 128 : 255);
+      // apll_freq = XTAL * (4 + sdm2 + sdm1 / 256) / divisor   ->   sdm1 = (apll_freq * divisor - XTAL * 4 - XTAL * sdm2) * 256 / XTAL
+      int startSDM1 = ((apll_freq * idivisor - FXTAL * 4.0 - FXTAL * sdm2) * 256.0 / FXTAL);
+#if FABGLIB_USE_APLL_AB_COEF
+      for (int isdm1 = tmax(minSDM1, startSDM1); isdm1 <= maxSDM1; ++isdm1) {
+#else
+      int isdm1 = startSDM1; {
+#endif
+
+        int sdm1 = isdm1;
+        sdm1 = tmax(minSDM1, sdm1);
+        sdm1 = tmin(maxSDM1, sdm1);
+
+        // apll_freq = XTAL * (4 + sdm2 + sdm1 / 256 + sdm0 / 65536) / divisor   ->   sdm0 = (apll_freq * divisor - XTAL * 4 - XTAL * sdm2 - XTAL * sdm1 / 256) * 65536 / XTAL
+        int sdm0 = ((apll_freq * idivisor - FXTAL * 4.0 - FXTAL * sdm2 - FXTAL * sdm1 / 256.0) * 65536.0 / FXTAL);
+        // from tables above
+        sdm0 = (sdm2 == 8 && sdm1 == 128 ? 0 : tmin(255, sdm0));
+        sdm0 = tmax(0, sdm0);
+
+        // dividend inside 350-500Mhz?
+        double dividend = FXTAL * (4.0 + sdm2 + sdm1 / 256.0 + sdm0 / 65536.0);
+        if (dividend >= 350000000 && dividend <= 500000000) {
+          // adjust output frequency using "b/a"
+          double oapll_freq = dividend / idivisor;
+
+          // Calculates "b/a", assuming tx_bck_div_num = 1 and clkm_div_num = 2:
+          //   freq = apll_clk / (2 + clkm_div_b / clkm_div_a)
+          //     abr = clkm_div_b / clkm_div_a
+          //     freq = apll_clk / (2 + abr)    =>    abr = apll_clk / freq - 2
+          uint8_t oa = 1, ob = 0;
+#if FABGLIB_USE_APLL_AB_COEF
+          double abr = oapll_freq / freq - 2.0;
+          if (abr > 0 && abr < 1) {
+            int num, den;
+            floatToFraction(abr, 63, &num, &den);
+            ob = tclamp(num, 0, 63);
+            oa = tclamp(den, 0, 63);
+          }
+#endif
+
+          // is this the best?
+          double ofreq = oapll_freq / (2.0 + (double)ob / oa);
+          double err = freq - ofreq;
+          if (abs(err) < abs(*error)) {
+            *params = (APLLParams){(uint8_t)sdm0, (uint8_t)sdm1, (uint8_t)sdm2, (uint8_t)o_div};
+            *a = oa;
+            *b = ob;
+            *out_freq = ofreq;
+            *error = err;
+            if (err == 0.0)
+              return;
+          }
+        }
+      }
+
+    }
+  }
+}
+
+void configureGPIO(gpio_num_t gpio, gpio_mode_t mode)
+{
+  PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[gpio], PIN_FUNC_GPIO);
+  gpio_set_direction(gpio, mode);
+}
+
+// if bit is -1 = clock signal
+// gpio = GPIO_UNUSED means not set
+void setupGPIO(gpio_num_t gpio, int bit, gpio_mode_t mode)
+{
+  if (bit == -1) {
+    // I2S1 clock out to CLK_OUT1 (fixed to GPIO0)
+    WRITE_PERI_REG(PIN_CTRL, 0xF);
+    PIN_FUNC_SELECT(GPIO_PIN_REG_0, FUNC_GPIO0_CLK_OUT1);
+  } else {
+    configureGPIO(gpio, mode);
+    gpio_matrix_out(gpio, I2S1O_DATA_OUT0_IDX + bit, false, false);
+  }
+}
 
 void VgaTiming::finishInitialization() {
     if (!m_mul_scan) m_mul_scan = 1;
@@ -278,7 +543,7 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
     uint16_t sectionHeight = curTiming->m_v_active / NUM_SECTIONS;
     uint16_t lineInSection = 0;
     uint16_t sectionIndex = 0;
-    uint8_t* sectionData = (uint8_t*) getSection(sectionIndex);
+    uint8_t* sectionData = (uint8_t*) &getSection(sectionIndex);
 
     // The vertical active area
     while (scanLine < curTiming->m_v_active) {
@@ -301,7 +566,7 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
         curDescr->owner = 1;
         curDescr->size = curTiming->m_h_fp + curTiming->m_h_sync + curTiming->m_h_bp;
         curDescr->length = curDescr->size;
-        curDescr->buf = (uint8_t volatile *) activePad;
+        curDescr->buf = (uint8_t volatile *) activePad.b;
         curDescr = nextDescr++;
 
         // Move to the next line
@@ -311,7 +576,7 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
             if (++sectionIndex >= NUM_SECTIONS) {
                 sectionIndex = 0;
             }
-            sectionData = (uint8_t*) getSection(sectionIndex);
+            sectionData = (uint8_t*) &getSection(sectionIndex);
         } else {
             sectionData += curTiming->m_h_active;
         }
@@ -327,7 +592,7 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
         curDescr->owner = 1;
         curDescr->size = curTiming->m_h_total;
         curDescr->length = curDescr->size;
-        curDescr->buf = (uint8_t volatile *) blankLine;
+        curDescr->buf = (uint8_t volatile *) blankLine.b;
         curDescr = nextDescr++;
 
         scanLine++; // Move to the next line
@@ -343,7 +608,7 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
         curDescr->owner = 1;
         curDescr->size = curTiming->m_h_total;
         curDescr->length = curDescr->size;
-        curDescr->buf = (uint8_t volatile *) blankLineVS;
+        curDescr->buf = (uint8_t volatile *) blankLineVS.b;
         curDescr = nextDescr++;
 
         scanLine++; // Move to the next line
@@ -359,7 +624,7 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
         curDescr->owner = 1;
         curDescr->size = curTiming->m_h_active;
         curDescr->length = curDescr->size;
-        curDescr->buf = (uint8_t volatile *) blankLine;
+        curDescr->buf = (uint8_t volatile *) blankLine.b;
         curDescr = nextDescr++;
 
         scanLine++; // Move to the next line
@@ -379,6 +644,98 @@ void VgaFrame::stopVideo() {
 
 void VgaFrame::startVideo() {
 
+    // GPIO configuration for color bits
+    setupGPIO(GPIO_RED_0,   VGA_RED_BIT,       GPIO_MODE_OUTPUT);
+    setupGPIO(GPIO_RED_1,   VGA_RED_BIT + 1,   GPIO_MODE_OUTPUT);
+    setupGPIO(GPIO_GREEN_0, VGA_GREEN_BIT,     GPIO_MODE_OUTPUT);
+    setupGPIO(GPIO_GREEN_1, VGA_GREEN_BIT + 1, GPIO_MODE_OUTPUT);
+    setupGPIO(GPIO_BLUE_0,  VGA_BLUE_BIT,      GPIO_MODE_OUTPUT);
+    setupGPIO(GPIO_BLUE_1,  VGA_BLUE_BIT + 1,  GPIO_MODE_OUTPUT);
+
+    // GPIO configuration for VSync and HSync
+    setupGPIO(GPIO_HSYNC, VGA_HSYNC_BIT, GPIO_MODE_OUTPUT);
+    setupGPIO(GPIO_VSYNC, VGA_VSYNC_BIT, GPIO_MODE_OUTPUT);
+
+    // Start the DMA
+
+    // Power on device
+    periph_module_enable(PERIPH_I2S1_MODULE);
+
+    // Initialize I2S device
+    I2S1.conf.tx_reset = 1;
+    I2S1.conf.tx_reset = 0;
+
+    // Reset DMA
+    I2S1.lc_conf.out_rst = 1;
+    I2S1.lc_conf.out_rst = 0;
+
+    // Reset FIFO
+    I2S1.conf.tx_fifo_reset = 1;
+    I2S1.conf.tx_fifo_reset = 0;
+
+    // Stop DMA clock
+    I2S1.clkm_conf.clk_en = 0;
+
+    // LCD mode
+    I2S1.conf2.val            = 0;
+    I2S1.conf2.lcd_en         = 1;
+    I2S1.conf2.lcd_tx_wrx2_en = (curTiming->m_mul_scan >= 2 ? 1 : 0);
+    I2S1.conf2.lcd_tx_sdx2_en = 0;
+
+    I2S1.sample_rate_conf.val         = 0;
+    I2S1.sample_rate_conf.tx_bits_mod = 8;
+
+    // Start DMA clock
+    APLLParams prms = {0, 0, 0, 0};
+    double error, out_freq;
+    uint8_t a = 1, b = 0;
+    APLLCalcParams(((double)curTiming->m_frequency)/1000000.0, &prms, &a, &b, &out_freq, &error);
+
+    I2S1.clkm_conf.val          = 0;
+    I2S1.clkm_conf.clkm_div_b   = b;
+    I2S1.clkm_conf.clkm_div_a   = a;
+    I2S1.clkm_conf.clkm_div_num = 2;  // not less than 2
+
+    I2S1.sample_rate_conf.tx_bck_div_num = 1; // this makes I2S1O_BCK = I2S1_CLK
+
+    rtc_clk_apll_enable(true, prms.sdm0, prms.sdm1, prms.sdm2, prms.o_div);
+
+    I2S1.clkm_conf.clka_en = 1;
+
+    // Setup FIFO
+    I2S1.fifo_conf.val                  = 0;
+    I2S1.fifo_conf.tx_fifo_mod_force_en = 1;
+    I2S1.fifo_conf.tx_fifo_mod          = 1;
+    I2S1.fifo_conf.tx_fifo_mod          = 1;
+    I2S1.fifo_conf.tx_data_num          = 32;
+    I2S1.fifo_conf.dscr_en              = 1;
+
+    I2S1.conf1.val           = 0;
+    I2S1.conf1.tx_stop_en    = 0;
+    I2S1.conf1.tx_pcm_bypass = 1;
+
+    I2S1.conf_chan.val         = 0;
+    I2S1.conf_chan.tx_chan_mod = 1;
+
+    //I2S1.conf.tx_right_first = 0;
+    I2S1.conf.tx_right_first = 1;
+
+    I2S1.timing.val = 0;
+
+    // Reset AHB interface of DMA
+    I2S1.lc_conf.ahbm_rst      = 1;
+    I2S1.lc_conf.ahbm_fifo_rst = 1;
+    I2S1.lc_conf.ahbm_rst      = 0;
+    I2S1.lc_conf.ahbm_fifo_rst = 0;
+
+    // Prepare to start DMA
+    I2S1.lc_conf.val = I2S_OUT_DATA_BURST_EN | I2S_OUTDSCR_BURST_EN;
+    I2S1.out_link.addr = (uint32_t)(void*) dmaDescr;
+    I2S1.int_clr.val = 0xFFFFFFFF;
+
+    // Start DMA
+    I2S1.out_link.start = 1;
+    I2S1.conf.tx_start  = 1;
 }
 
 void VgaFrame::clearScreen() {
