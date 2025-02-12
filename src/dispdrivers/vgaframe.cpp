@@ -546,10 +546,7 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
     auto nextDescr = curDescr + 1;
     uint16_t scanLine = 0;
     uint16_t outputLine = 0;
-    uint16_t sectionHeight = curTiming->m_v_active / NUM_SECTIONS;
-    uint16_t lineInSection = 0;
-    uint16_t sectionIndex = 0;
-    uint8_t* sectionData = (uint8_t*) &getSection(sectionIndex);
+    uint16_t lineIndex = 0;
 
     // The vertical active area
     while (scanLine < curTiming->m_v_active) {
@@ -557,11 +554,11 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
         curDescr->qe.stqe_next = nextDescr;
         curDescr->sosf = 0;
         curDescr->offset = 0;
-        curDescr->eof = 1;
+        curDescr->eof = 0;//1;
         curDescr->owner = 1;
         curDescr->size = curTiming->m_h_active;
         curDescr->length = curDescr->size;
-        curDescr->buf = (uint8_t volatile *) sectionData;
+        curDescr->buf = (uint8_t volatile *) outputLines[lineIndex].b;
         curDescr = nextDescr++;
 
         // Descriptor pointing to blanking (invisible) data, the "active pad"
@@ -577,14 +574,8 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
 
         // Move to the next line
         scanLine++;
-        if (++lineInSection >= numLinesInSection) {
-            lineInSection = 0;
-            if (++sectionIndex >= NUM_SECTIONS) {
-                sectionIndex = 0;
-            }
-            sectionData = (uint8_t*) &getSection(sectionIndex);
-        } else {
-            sectionData += curTiming->m_h_active;
+        if (++lineIndex >= NUM_OUTPUT_LINES) {
+            lineIndex = 0;
         }
     }
 
@@ -626,7 +617,7 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
         curDescr->qe.stqe_next = nextDescr;
         curDescr->sosf = 0;
         curDescr->offset = 0;
-        curDescr->eof = (((scanLine + 1) == curTiming->m_v_total - NUM_OUTPUT_LINES/2) ? 1 : 0);
+        curDescr->eof = 0;//(((scanLine + 1) == curTiming->m_v_total - NUM_OUTPUT_LINES/2) ? 1 : 0);
         curDescr->owner = 1;
         curDescr->size = curTiming->m_h_active;
         curDescr->length = curDescr->size;
@@ -642,6 +633,10 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
 }
 
 void VgaFrame::stopVideo() {
+    I2S1.conf.tx_reset = 1;
+    I2S1.conf.tx_fifo_reset = 1;
+    I2S1.clkm_conf.clk_en = 0;
+
     if (curSettings) {
         curSettings = nullptr;
         curTiming = nullptr;
