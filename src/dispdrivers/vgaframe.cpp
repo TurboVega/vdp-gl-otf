@@ -67,6 +67,7 @@ struct APLLParams {
 
 void debug_log(const char* fmt, ...);
 
+// If you modify this list, check VgaFrame::finishInitialization(), also!
 static VgaTiming VGA_320x200_70Hz {"320x200@70Hz", 12587500, 320, 328, 376, 400, 200, 206, 207, 224, HSNEG, VSNEG, DBL};
 static VgaTiming VGA_320x200_75Hz {"320x200@75Hz", 12930000, 320, 352, 376, 408, 200, 208, 211, 229, HSNEG, VSNEG, DBL};
 static VgaTiming VGA_320x200_75HzRetro {"320x200@75Hz", 12930000, 320, 352, 376, 408, 200, 208, 211, 229, HSNEG, VSNEG, DBL, MSB};
@@ -78,6 +79,8 @@ static VgaTiming VGA_512x384_60Hz {"512x384@60Hz", 32500000, 512, 524, 592, 672,
 static VgaTiming VGA_512x192_60Hz {"512x192@60Hz", 32500000, 512, 524, 592, 672, 192, 193, 194, 201, HSNEG, VSNEG, QUAD};
 static VgaTiming SVGA_640x360_60Hz {"640x360@60Hz", 37240000, 640, 734, 802, 832, 360, 361, 362, 373, HSPOS, VSPOS, DBL};
 static VgaTiming VGA_640x480_60Hz {"640x480@60Hz", 25175000, 640, 656, 752, 800, 480, 490, 492, 525, HSNEG, VSNEG};
+static VgaTiming VGA_640x480_60Hz_315 {"640x480@75Hz*", 31469000, 640, 656, 752, 800, 480, 490, 492, 525, HSNEG, VSNEG};
+static VgaTiming VGA_640x480_75Hz {"640x480@75Hz", 37500000, 640, 656, 720, 840, 480, 481, 484, 500, HSNEG, VSNEG};
 static VgaTiming VGA_640x240_60Hz {"640x240@60Hz", 25175000, 640, 656, 752, 800, 240, 245, 246, 262, HSNEG, VSNEG, DBL};
 static VgaTiming QSVGA_640x512_60Hz {"640x512@60Hz", 54000000, 640, 664, 720, 844, 512, 513, 515, 533, HSNEG, VSNEG, DBL};
 static VgaTiming QSVGA_640x256_60Hz {"640x256@60Hz", 54000000, 640, 664, 720, 844, 256, 257, 258, 267, HSNEG, VSNEG, QUAD};
@@ -133,7 +136,9 @@ static const VgaSettings vgaSettings[] = {
     { 146,  2, NEW, DBL, DBL_BUF_UNION_SIZE(1024, 768, 2), DBL_BUF_LEFTOVER_SIZE(1024, 768, 2), SVGA_1024x768_60Hz },
     { 149, 16, NEW, DBL, DBL_BUF_UNION_SIZE(512, 384, 16), DBL_BUF_LEFTOVER_SIZE(512, 384, 16), VGA_512x384_60Hz },
     { 150,  4, NEW, DBL, DBL_BUF_UNION_SIZE(512, 384, 4), DBL_BUF_LEFTOVER_SIZE(512, 384, 4), VGA_512x384_60Hz },
-    { 151,  2, NEW, DBL, DBL_BUF_UNION_SIZE(512, 384, 2), DBL_BUF_LEFTOVER_SIZE(512, 384, 2), VGA_512x384_60Hz }
+    { 151,  2, NEW, DBL, DBL_BUF_UNION_SIZE(512, 384, 2), DBL_BUF_LEFTOVER_SIZE(512, 384, 2), VGA_512x384_60Hz },
+    { 100,  4, NEW, SGL, BUF_UNION_SIZE(640, 480, 4), BUF_LEFTOVER_SIZE(640, 480, 4), VGA_640x480_75Hz },
+    { 101,  2, NEW, SGL, BUF_UNION_SIZE(640, 480, 2), BUF_LEFTOVER_SIZE(640, 480, 2), VGA_640x480_60Hz_315 }
 };
 
 template <typename T>
@@ -354,15 +359,15 @@ void setupGPIO(gpio_num_t gpio, int bit, gpio_mode_t mode)
 void VgaTiming::finishInitialization() {
     if (!m_mul_scan) m_mul_scan = 1;
 
-    m_h_active = m_h_fp_at;
-    m_h_fp = m_h_sync_at - m_h_fp_at;
-    m_h_sync = m_h_bp_at - m_h_sync_at;
-    m_h_bp = m_h_total - m_h_bp_at;
+    m_h_act_pix = m_h_fp_at;
+    m_h_fp_pix = m_h_sync_at - m_h_fp_at;
+    m_h_sync_pix = m_h_bp_at - m_h_sync_at;
+    m_h_bp_pix = m_h_total - m_h_bp_at;
 
-    m_v_active = m_v_fp_at;
-    m_v_fp = m_v_sync_at - m_v_fp_at;
-    m_v_sync = m_v_bp_at - m_v_sync_at;
-    m_v_bp = m_v_total - m_v_bp_at;
+    m_v_act_lns = m_v_fp_at;
+    m_v_fp_lns = m_v_sync_at - m_v_fp_at;
+    m_v_sync_lns = m_v_bp_at - m_v_sync_at;
+    m_v_bp_lns = m_v_total - m_v_bp_at;
 
     m_h_sync_off = m_h_sync_on ^ HSBIT;
     m_v_sync_off = m_v_sync_on ^ VSBIT;
@@ -370,16 +375,16 @@ void VgaTiming::finishInitialization() {
     m_hv_sync_off = m_h_sync_off | m_v_sync_off;
 
     m_hv_sync_4_on = 
-        ((uint32_t)m_h_sync_on) |
-        (((uint32_t)m_h_sync_on) << 8) |
-        (((uint32_t)m_h_sync_on) << 16) |
-        (((uint32_t)m_h_sync_on) << 24);
+        ((uint32_t)m_hv_sync_on) |
+        (((uint32_t)m_hv_sync_on) << 8) |
+        (((uint32_t)m_hv_sync_on) << 16) |
+        (((uint32_t)m_hv_sync_on) << 24);
 
     m_hv_sync_4_off = 
-        ((uint32_t)m_h_sync_off) |
-        (((uint32_t)m_h_sync_off) << 8) |
-        (((uint32_t)m_h_sync_off) << 16) |
-        (((uint32_t)m_h_sync_off) << 24);
+        ((uint32_t)m_hv_sync_off) |
+        (((uint32_t)m_hv_sync_off) << 8) |
+        (((uint32_t)m_hv_sync_off) << 16) |
+        (((uint32_t)m_hv_sync_off) << 24);
 }
 
 
@@ -459,6 +464,8 @@ void VgaFrame::finishInitialization() {
     SVGA_640x360_60Hz.finishInitialization();
     VGA_640x480_60Hz.finishInitialization();
     VGA_640x240_60Hz.finishInitialization();
+    VGA_640x480_60Hz_315.finishInitialization();
+    VGA_640x480_75Hz.finishInitialization();
     QSVGA_640x512_60Hz.finishInitialization();
     QSVGA_640x256_60Hz.finishInitialization();
     SVGA_800x600_60Hz.finishInitialization();
@@ -479,9 +486,9 @@ void VgaFrame::listModes() {
             i, s.m_mode, t.m_name, s.m_colors,
             s.m_size, s.m_remain, s.m_size*NUM_SECTIONS, s.m_remain*NUM_SECTIONS,
             (t.m_h_sync_on ? '+' : '-'),
-            t.m_h_active, t.m_h_fp, t.m_h_sync, t.m_h_bp,
+            t.m_h_act_pix, t.m_h_fp_pix, t.m_h_sync_pix, t.m_h_bp_pix,
             (t.m_v_sync_on ? '+' : '-'),
-            t.m_v_active, t.m_v_fp, t.m_v_sync, t.m_v_bp);
+            t.m_v_act_lns, t.m_v_fp_lns, t.m_v_sync_lns, t.m_v_bp_lns);
     }
 }
 
@@ -503,7 +510,7 @@ const VgaTiming& VgaFrame::getTiming(uint8_t mode, uint8_t colors, uint8_t legac
 }
 
 uint32_t VgaFrame::getSectionSize() {
-    return ((uint32_t)curTiming->m_h_active * (uint32_t)curTiming->m_v_active)
+    return ((uint32_t)curTiming->m_h_act_pix * (uint32_t)curTiming->m_v_act_lns)
                 / (BUF_BITS_DIV(curSettings->m_colors))
                 / NUM_SECTIONS;
 }
@@ -541,27 +548,27 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
 
     // Entire blank line with VS off
     // [active pixels][hfp HS hbp]
-    memset(blankLine.b, t->m_hv_sync_off, t->m_h_active);
-    memset(&blankLine.b[t->m_h_fp_at], t->m_hv_sync_off, t->m_h_fp);
-    memset(&blankLine.b[t->m_h_sync_at], t->m_h_sync_on | t->m_v_sync_off, t->m_h_sync);
-    memset(&blankLine.b[t->m_h_bp_at], t->m_hv_sync_off, t->m_h_bp);
+    memset(blankLine.b, t->m_hv_sync_off, t->m_h_act_pix);
+    memset(&blankLine.b[t->m_h_fp_at], t->m_hv_sync_off, t->m_h_fp_pix);
+    memset(&blankLine.b[t->m_h_sync_at], t->m_h_sync_on | t->m_v_sync_off, t->m_h_sync_pix);
+    memset(&blankLine.b[t->m_h_bp_at], t->m_hv_sync_off, t->m_h_bp_pix);
 
     // Entire blank line with VS on
     // [active pixels VS][hfp VS HS VS hbp VS]
-    memset(blankLineVS.b, t->m_v_sync_on | t->m_h_sync_off, t->m_h_active);
-    memset(&blankLineVS.b[t->m_h_fp_at], t->m_v_sync_on | t->m_h_sync_off, t->m_h_fp);
-    memset(&blankLineVS.b[t->m_h_sync_at], t->m_hv_sync_on, t->m_h_sync);
-    memset(&blankLineVS.b[t->m_h_bp_at], t->m_v_sync_on | t->m_h_sync_off, t->m_h_bp);
+    memset(blankLineVS.b, t->m_v_sync_on | t->m_h_sync_off, t->m_h_act_pix);
+    memset(&blankLineVS.b[t->m_h_fp_at], t->m_v_sync_on | t->m_h_sync_off, t->m_h_fp_pix);
+    memset(&blankLineVS.b[t->m_h_sync_at], t->m_hv_sync_on, t->m_h_sync_pix);
+    memset(&blankLineVS.b[t->m_h_bp_at], t->m_v_sync_on | t->m_h_sync_off, t->m_h_bp_pix);
 
     // Active pad when VS is off
     // [hfp HS hbp]
-    memset(activePad.b, t->m_hv_sync_off, t->m_h_fp);
-    memset(&activePad.b[t->m_h_fp], t->m_h_sync_on | t->m_v_sync_off, t->m_h_sync);
-    memset(&activePad.b[t->m_h_fp + t->m_h_sync], t->m_hv_sync_off, t->m_h_bp);
+    memset(activePad.b, t->m_hv_sync_off, t->m_h_fp_pix);
+    memset(&activePad.b[t->m_h_fp_pix], t->m_h_sync_on | t->m_v_sync_off, t->m_h_sync_pix);
+    memset(&activePad.b[t->m_h_fp_pix + t->m_h_sync_pix], t->m_hv_sync_off, t->m_h_bp_pix);
 
     // Output lines
     for (uint16_t line = 0; line < NUM_OUTPUT_LINES; line++) {
-        memset(outputLines[line].b, t->m_hv_sync_off | 0x04, t->m_h_active);
+        memset(outputLines[line].b, t->m_hv_sync_off | 0x04, t->m_h_act_pix);
     }
 
     // Drawing frame area
@@ -575,13 +582,13 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
     uint16_t lineIndex = 0;
 
     // The vertical active area
-    while (scanLine < t->m_v_active) {
+    while (scanLine < t->m_v_act_lns) {
         for (uint8_t repeats = 0; repeats < t->m_mul_scan; repeats++) {
             // Descriptor pointing to active (visible) data
             curDescr->qe.stqe_next = nextDescr;
             curDescr->eof = 0;//1;
             curDescr->owner = 1;
-            curDescr->size = t->m_h_active;
+            curDescr->size = t->m_h_act_pix;
             curDescr->length = curDescr->size;
             if (repeats == 0 || !t->m_mul_blank) {
                 curDescr->buf = (uint8_t volatile *) outputLines[lineIndex].b;
@@ -593,7 +600,7 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
             // Descriptor pointing to blanking (invisible) data, the "active pad"
             curDescr->qe.stqe_next = nextDescr;
             curDescr->owner = 1;
-            curDescr->size = t->m_h_fp + t->m_h_sync + t->m_h_bp;
+            curDescr->size = t->m_h_fp_pix + t->m_h_sync_pix + t->m_h_bp_pix;
             curDescr->length = curDescr->size;
             curDescr->buf = (uint8_t volatile *) activePad.b;
             curDescr = nextDescr++;
@@ -638,7 +645,7 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
         curDescr->qe.stqe_next = nextDescr;
         curDescr->eof = 0;//(((scanLine + 1) == t->m_v_total - NUM_OUTPUT_LINES/2) ? 1 : 0);
         curDescr->owner = 1;
-        curDescr->size = t->m_h_active;
+        curDescr->size = t->m_h_act_pix;
         curDescr->length = curDescr->size;
         curDescr->buf = (uint8_t volatile *) blankLine.b;
         curDescr = nextDescr++;
@@ -656,9 +663,18 @@ void VgaFrame::listDescriptors() {
     uint16_t index = 0;
     auto descr = dmaDescr;
     do {
-        debug_log("[%05hu] %p: %4u %p %p [%02hX .. %02hX]\n",
+        char sync[3];
+        if (((((uint8_t*)descr->buf)[0] & VSBIT) == curTiming->m_v_sync_on)) {
+            sprintf(sync, "%02hX", ((uint8_t*)descr->buf)[curTiming->m_h_sync_at]);
+        } else if (descr->size < 320) {
+            sprintf(sync, "%02hX", ((uint8_t*)descr->buf)[curTiming->m_h_fp_pix]);
+        } else {
+            strcpy(sync, "..");
+        }
+        debug_log("[%05hu] %p: %4u %p %p [%02hX .. %s .. %02hX]\n",
             index++, descr, descr->size, descr->buf, descr->qe.stqe_next,
-            ((uint8_t*)descr->buf)[0], ((uint8_t*)descr->buf)[descr->size - 1]);
+            ((uint8_t*)descr->buf)[0], sync,
+            ((uint8_t*)descr->buf)[descr->size - 1]);
         descr = descr->qe.stqe_next;
     } while (descr != dmaDescr);
 }

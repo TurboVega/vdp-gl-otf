@@ -122,14 +122,14 @@ typedef struct tag_VgaTiming {
     uint8_t         m_v_sync_on;    // output bit mask for when VS is on
     uint8_t         m_mul_scan;     // multiplier for scan lines
     uint8_t         m_mul_blank;    // whether extra lines are blank
-    uint16_t        m_h_active;     // horizontal active pixels
-    uint16_t        m_h_fp;         // horizontal front porch pixels
-    uint16_t        m_h_sync;       // horizontal sync pixels
-    uint16_t        m_h_bp;         // horizontal back porch pixels
-    uint16_t        m_v_active;     // vertical active pixels
-    uint16_t        m_v_fp;         // vertical front porch pixels
-    uint16_t        m_v_sync;       // vertical sync pixels
-    uint16_t        m_v_bp;         // vertical back porch pixels
+    uint16_t        m_h_act_pix;    // horizontal active pixels
+    uint16_t        m_h_fp_pix;     // horizontal front porch pixels
+    uint16_t        m_h_sync_pix;   // horizontal sync pixels
+    uint16_t        m_h_bp_pix;     // horizontal back porch pixels
+    uint16_t        m_v_act_lns;    // vertical active pixels
+    uint16_t        m_v_fp_lns;     // vertical front porch pixels
+    uint16_t        m_v_sync_lns;   // vertical sync pixels
+    uint16_t        m_v_bp_lns;     // vertical back porch pixels
     uint8_t         m_h_sync_off;   // output bit mask for when HS is off
     uint8_t         m_v_sync_off;   // output bit mask for when VS is off
     uint8_t         m_hv_sync_on;   // combination of H & V sync bits when on
