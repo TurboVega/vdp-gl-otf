@@ -499,6 +499,25 @@ FramePixels& VgaFrame::getSection(int index) {
     return *frame_sections[index];
 }
 
+/*
+    VGA Scan Line Format
+    Data in each set of brackets requires 1 DMA descriptor.
+
+    [ ... active pixels ...   ][hfp    ... HS    ... hbp]         <-- active area and active pad
+    [ ... active pixels ...   ][hfp    ... HS    ... hbp]         <-- active area and active pad
+    ...
+    [ ... active pixels ...   ][hfp    ... HS    ... hbp]         <-- active area
+    [ ... active pixels ...   ][hfp    ... HS    ... hbp]         <-- active area
+    [ ... blank pixels  ...     hfp    ... HS    ... hbp]         <-- vertical front porch
+    [ ... blank pixels  ...     hfp    ... HS    ... hbp]         <-- vertical front porch
+    ...
+    [ ... blank pixels VS ...   hfp VS ... HS VS ... hbp VS]      <-- vertical sync
+    [ ... blank pixels VS ...   hfp VS ... HS VS ... hbp VS]      <-- vertical sync
+    ...
+    [ ... blank pixels    ...   hfp    ... HS    ... hbp]         <-- vertical back porch
+    [ ... blank pixels    ...   hfp    ... HS    ... hbp]         <-- vertical back porch
+*/
+
 void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
     stopVideo();
     curSettings = &getSettings(mode, colors, legacy);
@@ -508,21 +527,21 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
     // Initialize the blanking area buffers
 
     // Entire blank line with VS off
-    // [active pixels][hfp][hs][hbp]
+    // [active pixels][hfp HS hbp]
     memset(blankLine.b, t->m_hv_sync_off, t->m_h_active);
     memset(&blankLine.b[t->m_h_fp_at], t->m_hv_sync_off, t->m_h_fp);
     memset(&blankLine.b[t->m_h_sync_at], t->m_h_sync_on | t->m_v_sync_off, t->m_h_sync);
     memset(&blankLine.b[t->m_h_bp_at], t->m_hv_sync_off, t->m_h_bp);
 
     // Entire blank line with VS on
-    // [active pixels][hfp][hs][hbp]
+    // [active pixels VS][hfp VS HS VS hbp VS]
     memset(blankLineVS.b, t->m_v_sync_on | t->m_h_sync_off, t->m_h_active);
     memset(&blankLineVS.b[t->m_h_fp_at], t->m_v_sync_on | t->m_h_sync_off, t->m_h_fp);
     memset(&blankLineVS.b[t->m_h_sync_at], t->m_hv_sync_on, t->m_h_sync);
     memset(&blankLineVS.b[t->m_h_bp_at], t->m_v_sync_on | t->m_h_sync_off, t->m_h_bp);
 
     // Active pad when VS is off
-    // [hfp][hs][hbp]
+    // [hfp HS hbp]
     memset(activePad.b, t->m_hv_sync_off, t->m_h_fp);
     memset(&activePad.b[t->m_h_fp], t->m_h_sync_on | t->m_v_sync_off, t->m_h_sync);
     memset(&activePad.b[t->m_h_fp + t->m_h_sync], t->m_hv_sync_off, t->m_h_bp);
@@ -536,33 +555,28 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
     clearScreen();
 
     // Link the DMA descriptors
-    auto numLinesInSection = curTiming->m_h_active / NUM_SECTIONS;
+    memset(dmaDescr, 0, sizeof(dmaDescr));
     auto curDescr = dmaDescr;
     auto nextDescr = curDescr + 1;
     uint16_t scanLine = 0;
-    uint16_t outputLine = 0;
     uint16_t lineIndex = 0;
+    auto t = t;
 
     // The vertical active area
-    while (scanLine < curTiming->m_v_active) {
+    while (scanLine < t->m_v_active) {
         // Descriptor pointing to active (visible) data
         curDescr->qe.stqe_next = nextDescr;
-        curDescr->sosf = 0;
-        curDescr->offset = 0;
         curDescr->eof = 0;//1;
         curDescr->owner = 1;
-        curDescr->size = curTiming->m_h_active;
+        curDescr->size = t->m_h_active;
         curDescr->length = curDescr->size;
         curDescr->buf = (uint8_t volatile *) outputLines[lineIndex].b;
         curDescr = nextDescr++;
 
         // Descriptor pointing to blanking (invisible) data, the "active pad"
         curDescr->qe.stqe_next = nextDescr;
-        curDescr->sosf = 0;
-        curDescr->offset = 0;
-        curDescr->eof = 0;
         curDescr->owner = 1;
-        curDescr->size = curTiming->m_h_fp + curTiming->m_h_sync + curTiming->m_h_bp;
+        curDescr->size = t->m_h_fp + t->m_h_sync + t->m_h_bp;
         curDescr->length = curDescr->size;
         curDescr->buf = (uint8_t volatile *) activePad.b;
         curDescr = nextDescr++;
@@ -575,14 +589,11 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
     }
 
     // The vertical front porch
-    while (scanLine < curTiming->m_v_sync_at) {
+    while (scanLine < t->m_v_sync_at) {
         // Descriptor pointing to entire blank line without VS
         curDescr->qe.stqe_next = nextDescr;
-        curDescr->sosf = 0;
-        curDescr->offset = 0;
-        curDescr->eof = 0;
         curDescr->owner = 1;
-        curDescr->size = curTiming->m_h_total;
+        curDescr->size = t->m_h_total;
         curDescr->length = curDescr->size;
         curDescr->buf = (uint8_t volatile *) blankLine.b;
         curDescr = nextDescr++;
@@ -591,14 +602,11 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
     }
 
     // The vertical sync
-    while (scanLine < curTiming->m_v_bp_at) {
+    while (scanLine < t->m_v_bp_at) {
         // Descriptor pointing to entire blank line with VS
         curDescr->qe.stqe_next = nextDescr;
-        curDescr->sosf = 0;
-        curDescr->offset = 0;
-        curDescr->eof = 0;
         curDescr->owner = 1;
-        curDescr->size = curTiming->m_h_total;
+        curDescr->size = t->m_h_total;
         curDescr->length = curDescr->size;
         curDescr->buf = (uint8_t volatile *) blankLineVS.b;
         curDescr = nextDescr++;
@@ -607,14 +615,12 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
     }
 
     // The vertical back porch
-    while (scanLine < curTiming->m_v_total) {
+    while (scanLine < t->m_v_total) {
         // Descriptor pointing to entire blank line without VS
         curDescr->qe.stqe_next = nextDescr;
-        curDescr->sosf = 0;
-        curDescr->offset = 0;
-        curDescr->eof = 0;//(((scanLine + 1) == curTiming->m_v_total - NUM_OUTPUT_LINES/2) ? 1 : 0);
+        curDescr->eof = 0;//(((scanLine + 1) == t->m_v_total - NUM_OUTPUT_LINES/2) ? 1 : 0);
         curDescr->owner = 1;
-        curDescr->size = curTiming->m_h_active;
+        curDescr->size = t->m_h_active;
         curDescr->length = curDescr->size;
         curDescr->buf = (uint8_t volatile *) blankLine.b;
         curDescr = nextDescr++;
