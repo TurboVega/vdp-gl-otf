@@ -65,8 +65,8 @@ typedef union tag_FramePixels {
     BUF_UNION_NAME(320, 240, 2)    BUF_MEMBER_NAME(320, 240, 2);
     BUF_UNION_NAME(320, 240, 4)    BUF_MEMBER_NAME(320, 240, 4);
     BUF_UNION_NAME(320, 240, 16)   BUF_MEMBER_NAME(320, 240, 16);
-    BUF_UNION_NAME(320, 240, 64)   BUF_MEMBER_NAME(320, 240, 64);
     /*
+    BUF_UNION_NAME(320, 240, 64)   BUF_MEMBER_NAME(320, 240, 64);
     BUF_UNION_NAME(512, 384, 2)    BUF_MEMBER_NAME(512, 384, 2);
     BUF_UNION_NAME(512, 384, 4)    BUF_MEMBER_NAME(512, 384, 4);
     BUF_UNION_NAME(512, 384, 16)   BUF_MEMBER_NAME(512, 384, 16);
@@ -138,8 +138,8 @@ typedef struct tag_VgaTiming {
     uint32_t        m_hv_sync_4_off;  // combination of H & V sync bits when off (4 pixels)
 } VgaTiming;
 
-#define HSBIT       0x80    // bit indicating value of HS
-#define VSBIT       0x40    // bit indicating value of VS
+#define HSBIT       0x40    // bit indicating value of HS
+#define VSBIT       0x80    // bit indicating value of VS
 #define HSNEG       0x00    // HS negative
 #define HSPOS       HSBIT   // HS positive
 #define VSNEG       0x00    // VS negative
@@ -172,7 +172,7 @@ public:
 
     void finishInitialization(); // call this after construction
     int getNumModes(); // Gets the number of distinct video modes
-    void listModes(); // Dumps list of all video modes to debug output
+    void listModes(); // Dump a list of all video modes to debug output
 
     // Get a reference to the settings for a video mode, based on the parameters
     const VgaSettings& getSettings(uint8_t mode, uint8_t colors, uint8_t legacy);
@@ -181,11 +181,17 @@ public:
     // Note: if you call get_settings(), you get a reference to the timing, also
     const VgaTiming& getTiming(uint8_t mode, uint8_t colors, uint8_t legacy);
 
+    // Get the size of one section of frame pixels
+    uint32_t getSectionSize();
+
     // Get a reference to one section of frame pixels
     FramePixels& getSection(int index);
 
     // Set the video mode using the given parameters
     void setMode(uint8_t mode, uint8_t colors, uint8_t legacy);
+
+    // Dump information about DMA descriptors to debug output
+    void listDescriptors();
 
     // Stop the video output
     void stopVideo();

@@ -502,6 +502,12 @@ const VgaTiming& VgaFrame::getTiming(uint8_t mode, uint8_t colors, uint8_t legac
     return s.m_timing;
 }
 
+uint32_t VgaFrame::getSectionSize() {
+    return ((uint32_t)curTiming->m_h_active * (uint32_t)curTiming->m_v_active)
+                / (BUF_BITS_DIV(curSettings->m_colors))
+                / NUM_SECTIONS;
+}
+
 FramePixels& VgaFrame::getSection(int index) {
     return *frame_sections[index];
 }
@@ -645,6 +651,18 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
     startVideo();
 }
 
+void VgaFrame::listDescriptors() {
+    debug_log("\nDMA Descriptors:\n");
+    uint16_t index = 0;
+    auto descr = dmaDescr;
+    do {
+        debug_log("[%05hu] %p: %4u %p %p [%02hX .. %02hX]\n",
+            index++, descr, descr->size, descr->buf, descr->qe.stqe_next,
+            ((uint8_t*)descr->buf)[0], ((uint8_t*)descr->buf)[descr->size - 1]);
+        descr = descr->qe.stqe_next;
+    } while (descr != dmaDescr);
+}
+
 void VgaFrame::stopVideo() {
     I2S1.conf.tx_reset = 1;
     I2S1.conf.tx_fifo_reset = 1;
@@ -753,9 +771,11 @@ void VgaFrame::startVideo() {
 }
 
 void VgaFrame::clearScreen() {
-    auto sect_size =
-        ((uint32_t)curTiming->m_h_active * (uint32_t)curTiming->m_v_active) / NUM_SECTIONS;
+    auto sect_size = getSectionSize();
+    debug_log("section size %u\n", sect_size);
+    return;
     for (uint16_t s = 0; s < NUM_SECTIONS; s++) {
+        debug_log("section %hu %p\n", s, &getSection(s));
         memset(&getSection(s), 0, sect_size);
     }
 }
