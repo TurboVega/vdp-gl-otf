@@ -10,11 +10,14 @@
 #include "driver/gpio.h"
 #include "soc/io_mux_reg.h"
 
-#define MAX_TOTAL_LINES     806     // includes active, vfp, vs, and vbp
-#define MAX_ACTIVE_PIXELS   1024
 #define MAX_ACTIVE_LINES    768
+#define ADD_BLANKING_LINES  38      // for the mode with 768 active lines
+#define MAX_TOTAL_LINES     806     // includes active, vfp, vs, and vbp
+
+#define MAX_ACTIVE_PIXELS   1024
 #define MAX_BLANKING_PIXELS 320
 #define MAX_TOTAL_PIXELS    (MAX_ACTIVE_PIXELS + MAX_BLANKING_PIXELS)
+
 #define NUM_OUTPUT_LINES    8       // DMA pixels to be sent out; must be a power of 2!
 
 #define GPIO_RED_0    GPIO_NUM_21
@@ -402,7 +405,11 @@ FramePixels* frame_sections[NUM_SECTIONS] = {
 
 VgaFrame vgaFrame;
 
-DMA_ATTR lldesc_t dmaDescr[MAX_TOTAL_LINES + MAX_ACTIVE_LINES];
+// Each active line will have 2 DMA descriptors.
+// An active line may be displayed 1, 2, or 4 times, thus needing 2, 4, or 8 descriptors.
+// Blanking area lines each use 1 DMA descriptor.
+//
+DMA_ATTR lldesc_t dmaDescr[MAX_ACTIVE_LINES * 4 + ADD_BLANKING_LINES];
 
 DMA_ATTR union {
     uint32_t w[MAX_TOTAL_PIXELS/4];
@@ -560,26 +567,31 @@ void VgaFrame::setMode(uint8_t mode, uint8_t colors, uint8_t legacy) {
     auto nextDescr = curDescr + 1;
     uint16_t scanLine = 0;
     uint16_t lineIndex = 0;
-    auto t = t;
 
     // The vertical active area
     while (scanLine < t->m_v_active) {
-        // Descriptor pointing to active (visible) data
-        curDescr->qe.stqe_next = nextDescr;
-        curDescr->eof = 0;//1;
-        curDescr->owner = 1;
-        curDescr->size = t->m_h_active;
-        curDescr->length = curDescr->size;
-        curDescr->buf = (uint8_t volatile *) outputLines[lineIndex].b;
-        curDescr = nextDescr++;
+        for (uint8_t repeats = 0; repeats < t->m_mul_scan; repeats++) {
+            // Descriptor pointing to active (visible) data
+            curDescr->qe.stqe_next = nextDescr;
+            curDescr->eof = 0;//1;
+            curDescr->owner = 1;
+            curDescr->size = t->m_h_active;
+            curDescr->length = curDescr->size;
+            if (repeats == 0 || !t->m_mul_blank) {
+                curDescr->buf = (uint8_t volatile *) outputLines[lineIndex].b;
+            } else {
+                curDescr->buf = (uint8_t volatile *) blankLine.b;
+            }
+            curDescr = nextDescr++;
 
-        // Descriptor pointing to blanking (invisible) data, the "active pad"
-        curDescr->qe.stqe_next = nextDescr;
-        curDescr->owner = 1;
-        curDescr->size = t->m_h_fp + t->m_h_sync + t->m_h_bp;
-        curDescr->length = curDescr->size;
-        curDescr->buf = (uint8_t volatile *) activePad.b;
-        curDescr = nextDescr++;
+            // Descriptor pointing to blanking (invisible) data, the "active pad"
+            curDescr->qe.stqe_next = nextDescr;
+            curDescr->owner = 1;
+            curDescr->size = t->m_h_fp + t->m_h_sync + t->m_h_bp;
+            curDescr->length = curDescr->size;
+            curDescr->buf = (uint8_t volatile *) activePad.b;
+            curDescr = nextDescr++;
+        }
 
         // Move to the next line
         scanLine++;
