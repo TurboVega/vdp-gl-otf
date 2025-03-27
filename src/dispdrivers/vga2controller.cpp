@@ -379,7 +379,6 @@ void VGA2Controller::fillSector(Rect const & rect, Rect & updateRect)
 
 void VGA2Controller::clear(Rect & updateRect)
 {
-  hideSprites(updateRect);
   uint8_t paletteIndex = RGB888toPaletteIndex(getActualBrushColor());
   uint8_t pattern8 = paletteIndex ? 0xFF : 0x00;
   for (int y = 0; y < m_viewPortHeight; ++y)
@@ -401,7 +400,6 @@ void VGA2Controller::VScroll(int scroll, Rect & updateRect)
 
 void VGA2Controller::HScroll(int scroll, Rect & updateRect)
 {
-  hideSprites(updateRect);
   uint8_t back  = RGB888toPaletteIndex(getActualBrushColor());
   uint8_t back8 = back ? 0xFF : 0x00;
 

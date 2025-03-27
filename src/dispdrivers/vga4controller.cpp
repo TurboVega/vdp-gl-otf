@@ -409,7 +409,6 @@ void VGA4Controller::fillSector(Rect const & rect, Rect & updateRect)
 
 void VGA4Controller::clear(Rect & updateRect)
 {
-  hideSprites(updateRect);
   uint8_t paletteIndex = RGB888toPaletteIndex(getActualBrushColor());
   uint8_t pattern4 = paletteIndex | (paletteIndex << 2) | (paletteIndex << 4) | (paletteIndex << 6);
   for (int y = 0; y < m_viewPortHeight; ++y)
@@ -431,7 +430,6 @@ void VGA4Controller::VScroll(int scroll, Rect & updateRect)
 
 void VGA4Controller::HScroll(int scroll, Rect & updateRect)
 {
-  hideSprites(updateRect);
   uint8_t back  = RGB888toPaletteIndex(getActualBrushColor());
   uint8_t back4 = back | (back << 2) | (back << 4) | (back << 6);
 

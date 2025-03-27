@@ -312,7 +312,6 @@ void Painter16::fillSector(Rect const & rect, Rect & updateRect) {
 }
 
 void Painter16::clear(Rect & updateRect) {
-  hideSprites(updateRect);
   uint8_t paletteIndex = RGB888toPaletteIndex(getActualBrushColor());
   uint8_t pattern = paletteIndex | (paletteIndex << 4);
   for (int y = 0; y < m_viewPortHeight; ++y)
@@ -330,7 +329,6 @@ void Painter16::VScroll(int scroll, Rect & updateRect) {
 }
 
 void Painter16::HScroll(int scroll, Rect & updateRect) {
-  hideSprites(updateRect);
   uint8_t back4 = RGB888toPaletteIndex(getActualBrushColor());
 
   int Y1 = paintState().scrollingRegion.Y1;

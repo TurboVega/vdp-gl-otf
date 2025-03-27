@@ -34,6 +34,7 @@
 #pragma once
 
 #include "paintdefs.h"
+#include <math.h>
 
 namespace fabgl {
 
@@ -107,10 +108,10 @@ class Painter {
   protected:
 
   // methods to get lambdas to get/set pixels
-  virtual std::function<uint8_t(RGB888 const &)> getPixelLambda(PaintMode mode) = 0;
-  virtual std::function<virtual void(int X, int Y, uint8_t colorIndex)> setPixelLambda(PaintMode mode) = 0;
-  virtual std::function<virtual void(uint8_t * row, int x, uint8_t colorIndex)> setRowPixelLambda(PaintMode mode) = 0;
-  virtual std::function<virtual void(int Y, int X1, int X2, uint8_t colorIndex)> fillRowLambda(PaintMode mode) = 0;
+  std::function<uint8_t(RGB888 const &)> getPixelLambda(PaintMode mode) = 0;
+  std::function<virtual void(int X, int Y, uint8_t colorIndex)> setPixelLambda(PaintMode mode) = 0;
+  std::function<virtual void(uint8_t * row, int x, uint8_t colorIndex)> setRowPixelLambda(PaintMode mode) = 0;
+  std::function<virtual void(int Y, int X1, int X2, uint8_t colorIndex)> fillRowLambda(PaintMode mode) = 0;
 
   template <typename TPreparePixel, typename TRawSetPixel>
   void genericSetPixelAt(PixelDesc const & pixelDesc, Rect & updateRect, TPreparePixel preparePixel, TRawSetPixel rawSetPixel)
@@ -125,7 +126,6 @@ class Painter {
 
     if (x >= clipX1 && x <= clipX2 && y >= clipY1 && y <= clipY2) {
       updateRect = updateRect.merge(Rect(x, y, x, y));
-      hideSprites(updateRect);
       rawSetPixel(x, y, preparePixel(pixelDesc.color));
     }
   }
@@ -264,7 +264,6 @@ class Painter {
     const int halfHeight = size.height / 2;
 
     updateRect = updateRect.merge(Rect(centerX - halfWidth, centerY - halfHeight, centerX + halfWidth, centerY + halfHeight));
-    hideSprites(updateRect);
 
     const int a2 = halfWidth * halfWidth;
     const int b2 = halfHeight * halfHeight;
@@ -346,7 +345,6 @@ class Painter {
 
     // Simplistic updateRect, using whole bounding box of circle
     updateRect = updateRect.merge(Rect(centerX - radius, centerY - radius, centerX + radius, centerY + radius));
-    hideSprites(updateRect);
 
     int x = -r;
     int y = 0;
@@ -414,7 +412,6 @@ class Painter {
 
     // Simplistic updateRect, using whole bounding box of circle
     updateRect = updateRect.merge(Rect(centerX - radius, centerY - radius, centerX + radius, centerY + radius));
-    hideSprites(updateRect);
 
     int r = radius;
     int x = 0;
@@ -538,7 +535,6 @@ class Painter {
 
     // Simplistic updateRect, using whole bounding box of circle
     updateRect = updateRect.merge(Rect(centerX - radius, centerY - radius, centerX + radius, centerY + radius));
-    hideSprites(updateRect);
 
     int r = radius;
     int x = 0;
@@ -871,7 +867,6 @@ class Painter {
       YCount = glyphHeight - Y1;
 
     updateRect = updateRect.merge(Rect(destX, destY, destX + XCount + skewAdder - 1, destY + YCount - 1));
-    hideSprites(updateRect);
 
     if (glyphOptions.invert ^ paintState().paintOptions.swapFGBG)
       tswap(penColor, brushColor);
@@ -1007,7 +1002,6 @@ class Painter {
       YCount = glyphHeight - Y1;
 
     updateRect = updateRect.merge(Rect(destX, destY, destX + XCount - 1, destY + YCount - 1));
-    hideSprites(updateRect);
 
     if (glyphOptions.invert ^ paintState().paintOptions.swapFGBG)
       tswap(penColor, brushColor);
@@ -1061,7 +1055,6 @@ class Painter {
     const int y2 = iclamp(rect.Y2 + origY, clipY1, clipY2);
 
     updateRect = updateRect.merge(Rect(x1, y1, x2, y2));
-    hideSprites(updateRect);
 
     for (int y = y1; y <= y2; ++y)
       rawInvertRow(y, x1, x2);
@@ -1088,7 +1081,6 @@ class Painter {
     const int y2 = iclamp(rect.Y2 + origY, clipY1, clipY2);
 
     updateRect = updateRect.merge(Rect(x1, y1, x2, y2));
-    hideSprites(updateRect);
 
     for (int y = y1; y <= y2; ++y) {
       auto row = rawGetRow(y);
@@ -1131,7 +1123,6 @@ class Painter {
 
     updateRect = updateRect.merge(Rect(srcX, srcY, srcX + width - 1, srcY + height - 1));
     updateRect = updateRect.merge(Rect(destX, destY, destX + width - 1, destY + height - 1));
-    hideSprites(updateRect);
 
     for (int y = startY, i = 0; i < height; y += incY, ++i) {
       if (y >= clipY1 && y <= clipY2) {
@@ -1414,7 +1405,6 @@ class Painter {
   void genericVScroll(int scroll, Rect & updateRect,
                       TRawCopyRow rawCopyRow, TRawFillRow rawFillRow)
   {
-    hideSprites(updateRect);
     RGB888 color = getActualBrushColor();
     int Y1 = paintState().scrollingRegion.Y1;
     int Y2 = paintState().scrollingRegion.Y2;
@@ -1457,7 +1447,6 @@ class Painter {
   void genericVScroll(int scroll, Rect & updateRect,
                       TSwapRowsCopying swapRowsCopying, TSwapRowsPointers swapRowsPointers, TRawFillRow rawFillRow)
   {
-    hideSprites(updateRect);
     RGB888 color = getActualBrushColor();
     const int Y1 = paintState().scrollingRegion.Y1;
     const int Y2 = paintState().scrollingRegion.Y2;
@@ -1465,7 +1454,7 @@ class Painter {
     const int X2 = paintState().scrollingRegion.X2;
     const int height = Y2 - Y1 + 1;
 
-    const int viewPortWidth = getViewPortWidth();
+    const int viewPortWidth = m_viewPortWidth;
 
     if (scroll < 0) {
 
@@ -1518,7 +1507,6 @@ class Painter {
   void genericHScroll(int scroll, Rect & updateRect,
                       TPreparePixel preparePixel, TRawGetRow rawGetRow, TRawGetPixelInRow rawGetPixelInRow, TRawSetPixelInRow rawSetPixelInRow)
   {
-    hideSprites(updateRect);
     auto pattern = preparePixel(getActualBrushColor());
 
     int Y1 = paintState().scrollingRegion.Y1;

@@ -398,7 +398,6 @@ void VGA16Controller::fillSector(Rect const & rect, Rect & updateRect)
 
 void VGA16Controller::clear(Rect & updateRect)
 {
-  hideSprites(updateRect);
   uint8_t paletteIndex = RGB888toPaletteIndex(getActualBrushColor());
   uint8_t pattern = paletteIndex | (paletteIndex << 4);
   for (int y = 0; y < m_viewPortHeight; ++y)
@@ -420,7 +419,6 @@ void VGA16Controller::VScroll(int scroll, Rect & updateRect)
 
 void VGA16Controller::HScroll(int scroll, Rect & updateRect)
 {
-  hideSprites(updateRect);
   uint8_t back4 = RGB888toPaletteIndex(getActualBrushColor());
 
   int Y1 = paintState().scrollingRegion.Y1;

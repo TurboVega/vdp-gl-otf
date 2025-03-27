@@ -378,7 +378,6 @@ void VGA8Controller::fillSector(Rect const & rect, Rect & updateRect)
 
 void VGA8Controller::clear(Rect & updateRect)
 {
-  hideSprites(updateRect);
   uint8_t paletteIndex = RGB888toPaletteIndex(getActualBrushColor());
   uint32_t pattern8 = (paletteIndex) | (paletteIndex << 3) | (paletteIndex << 6) | (paletteIndex << 9) | (paletteIndex << 12) | (paletteIndex << 15) | (paletteIndex << 18) | (paletteIndex << 21);
   for (int y = 0; y < m_viewPortHeight; ++y) {
@@ -404,7 +403,6 @@ void VGA8Controller::VScroll(int scroll, Rect & updateRect)
 // todo: optimize!
 void VGA8Controller::HScroll(int scroll, Rect & updateRect)
 {
-  hideSprites(updateRect);
   uint8_t back = RGB888toPaletteIndex(getActualBrushColor());
 
   int Y1 = paintState().scrollingRegion.Y1;

@@ -285,7 +285,6 @@ void Painter8::fillSector(Rect const & rect, Rect & updateRect) {
 }
 
 void Painter8::clear(Rect & updateRect) {
-  hideSprites(updateRect);
   uint8_t paletteIndex = RGB888toPaletteIndex(getActualBrushColor());
   uint32_t pattern8 = (paletteIndex) | (paletteIndex << 3) | (paletteIndex << 6) | (paletteIndex << 9) | (paletteIndex << 12) | (paletteIndex << 15) | (paletteIndex << 18) | (paletteIndex << 21);
   for (int y = 0; y < m_viewPortHeight; ++y) {
@@ -307,7 +306,6 @@ void Painter8::VScroll(int scroll, Rect & updateRect) {
 
 // todo: optimize!
 void Painter8::HScroll(int scroll, Rect & updateRect) {
-  hideSprites(updateRect);
   uint8_t back = RGB888toPaletteIndex(getActualBrushColor());
 
   int Y1 = paintState().scrollingRegion.Y1;

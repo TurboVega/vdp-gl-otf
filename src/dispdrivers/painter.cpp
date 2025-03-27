@@ -96,51 +96,11 @@ void Painter::VScroll(int scroll, Rect & updateRect)
                 );
 }
 
-void Painter::drawGlyph(Glyph const & glyph, GlyphOptions glyphOptions, RGB888 penColor, RGB888 brushColor, Rect & updateRect)
-{
-  auto mode = paintState().paintOptions.mode;
-  auto getPixel = getPixelLambda(mode);
-  auto setRowPixel = setRowPixelLambda(mode);
-  genericDrawGlyph(glyph, glyphOptions, penColor, brushColor, updateRect,
-                   getPixel,
-                   [&] (int y) { return (uint8_t*) m_viewPort[y]; },
-                   setRowPixel
-                  );
-}
-
 void Painter::invertRect(Rect const & rect, Rect & updateRect)
 {
   genericInvertRect(rect, updateRect,
                     [&] (int Y, int X1, int X2) { rawInvertRow(Y, X1, X2); }
                    );
-}
-
-std::function<void(int Y, int X1, int X2, uint8_t colorIndex)> Painter::fillRowLambda(PaintMode mode)
-{
-  switch (mode) {
-    case PaintMode::Set:
-      return [&] (int Y, int X1, int X2, uint8_t colorIndex) { rawFillRow(Y, X1, X2, colorIndex); };
-    case PaintMode::OR:
-      return [&] (int Y, int X1, int X2, uint8_t colorIndex) { rawORRow(Y, X1, X2, colorIndex); };
-    case PaintMode::ORNOT:
-      return [&] (int Y, int X1, int X2, uint8_t colorIndex) { rawORRow(Y, X1, X2, ~colorIndex & 1); };
-    case PaintMode::AND:
-      return [&] (int Y, int X1, int X2, uint8_t colorIndex) { rawANDRow(Y, X1, X2, colorIndex); };
-    case PaintMode::ANDNOT:
-      return [&] (int Y, int X1, int X2, uint8_t colorIndex) { rawANDRow(Y, X1, X2, ~colorIndex & 1); };
-    case PaintMode::XOR:
-      return [&] (int Y, int X1, int X2, uint8_t colorIndex) { rawXORRow(Y, X1, X2, colorIndex); };
-    case PaintMode::Invert:
-      return [&] (int Y, int X1, int X2, uint8_t colorIndex) { rawInvertRow(Y, X1, X2); };
-    default:  // PaintMode::NoOp
-      return [&] (int Y, int X1, int X2, uint8_t colorIndex) { return; };
-  }
-}
-
-void Painter::setPixelAt(PixelDesc const & pixelDesc, Rect & updateRect)
-{
-  auto paintMode = paintState().paintOptions.mode;
-  genericSetPixelAt(pixelDesc, updateRect, getPixelLambda(paintMode), setPixelLambda(paintMode));
 }
 
 void Painter::setPaletteItem(int index, RGB888 const & color)

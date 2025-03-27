@@ -523,6 +523,13 @@ struct PaintState {
 
 
 /**
+ * @brief Works out which quadrant a relative point is in, from a 0, 0 center.
+ * Quadrants are numbered 0-3, top right to bottom right, anticlockwise.
+ */
+uint8_t getCircleQuadrant(int x, int y);
+
+
+/**
  * @brief Represents a walkable line, with integer coordinates.
  *
  * Uses Bresenham's algorithm to calculate the points of the line.
@@ -648,13 +655,6 @@ struct LineInfo {
     return isqrt(deltaX * deltaX + deltaY * deltaY);
   }
 };
-
-/**
- * @brief Works out which quadrant a relative point is in, from a 0, 0 center.
- * Quadrants are numbered 0-3, top right to bottom right, anticlockwise.
- */
-uint8_t getCircleQuadrant(int x, int y);
-
 
 /**
  * @brief Quadrant info for arc, sector and segment drawing functions.

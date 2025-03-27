@@ -313,7 +313,6 @@ void VGA64Controller::fillSector(Rect const & rect, Rect & updateRect)
 
 void VGA64Controller::clear(Rect & updateRect)
 {
-  hideSprites(updateRect);
   uint8_t pattern = preparePixel(getActualBrushColor());
   for (int y = 0; y < m_viewPortHeight; ++y)
     memset((uint8_t*) m_viewPort[y], pattern, m_viewPortWidth);
@@ -338,7 +337,6 @@ void VGA64Controller::VScroll(int scroll, Rect & updateRect)
 // Horizontal scrolling region start and size (X2-X1+1) must be aligned to 32 bits, otherwise the unoptimized (very slow) version is used.
 void VGA64Controller::HScroll(int scroll, Rect & updateRect)
 {
-  hideSprites(updateRect);
   uint8_t pattern8   = preparePixel(getActualBrushColor());
   uint16_t pattern16 = pattern8 << 8 | pattern8;
   uint32_t pattern32 = pattern16 << 16 | pattern16;

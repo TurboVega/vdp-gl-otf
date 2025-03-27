@@ -316,7 +316,6 @@ void Painter4::fillSector(Rect const & rect, Rect & updateRect) {
 }
 
 void Painter4::clear(Rect & updateRect) {
-  hideSprites(updateRect);
   uint8_t paletteIndex = RGB888toPaletteIndex(getActualBrushColor());
   uint8_t pattern4 = paletteIndex | (paletteIndex << 2) | (paletteIndex << 4) | (paletteIndex << 6);
   for (int y = 0; y < m_viewPortHeight; ++y)
@@ -334,7 +333,6 @@ void Painter4::VScroll(int scroll, Rect & updateRect) {
 }
 
 void Painter4::HScroll(int scroll, Rect & updateRect) {
-  hideSprites(updateRect);
   uint8_t back  = RGB888toPaletteIndex(getActualBrushColor());
   uint8_t back4 = back | (back << 2) | (back << 4) | (back << 6);
 
