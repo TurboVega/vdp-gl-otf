@@ -79,31 +79,6 @@ bool TimeOut::expired(int valueMS)
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-// isqrt
-
-// Integer square root by Halleck's method, with Legalize's speedup
-int isqrt (int x)
-{
-  if (x < 1)
-    return 0;
-  int squaredbit = 0x40000000;
-  int remainder = x;
-  int root = 0;
-  while (squaredbit > 0) {
-    if (remainder >= (squaredbit | root)) {
-      remainder -= (squaredbit | root);
-      root >>= 1;
-      root |= squaredbit;
-    } else
-      root >>= 1;
-    squaredbit >>= 2;
-  }
-  return root;
-}
-
-
-
-////////////////////////////////////////////////////////////////////////////////////////////
 // calcParity
 
 bool calcParity(uint8_t v)
@@ -378,62 +353,6 @@ bool getBit(uint8_t* array, size_t bitIndex) {
     size_t byteIndex = bitIndex / 8;
     int bitPosition = 7 - (bitIndex % 8);
     return (array[byteIndex] >> bitPosition) & 1;
-}
-
-
-uint8_t getCircleQuadrant(int x, int y) {
-  if (x < 0) {
-    if (y > 0) {
-      return 2;
-    }
-    return 1;
-  }
-  if (y <= 0) {
-    return 0;
-  }
-  return 3;
-}
-
-
-bool quadrantContainsArcPixel(QuadrantInfo & quadrant, LineInfo & start, LineInfo & end, int16_t x, int16_t y) {
-  // Work out whether our arc circumference pixel should be shown in this quadrant
-  bool drawing = false;
-  if (quadrant.showAll) {
-    return true;
-  } else if (!quadrant.noArc) {
-    if (quadrant.containsStart) {
-      auto slopeTest = start.absDeltaY * abs(x);
-      if (quadrant.isEven) {
-        drawing = slopeTest <= (start.absDeltaX * abs(y));
-      } else {
-        drawing = slopeTest >= (start.absDeltaX * abs(y));
-      }
-      if (quadrant.containsEnd) {
-        slopeTest = end.absDeltaY * abs(x);
-        bool drawingEnd = false;
-        if (quadrant.isEven) {
-          drawingEnd = (slopeTest >= (end.absDeltaX * abs(y)));
-        } else {
-          drawingEnd = (slopeTest <= (end.absDeltaX * abs(y)));
-        }
-        if (quadrant.containsStart && quadrant.containsEnd) {
-          if (quadrant.startCloserToHorizontal ^ quadrant.isEven) {
-            return drawing || drawingEnd;
-          } else {
-            return drawing && drawingEnd;
-          }
-        }
-      }
-    } else if (quadrant.containsEnd) {
-      auto slopeTest = end.absDeltaY * abs(x);
-      if (quadrant.isEven) {
-        return slopeTest >= (end.absDeltaX * abs(y));
-      } else {
-        return slopeTest <= (end.absDeltaX * abs(y));
-      }
-    }
-  }
-  return drawing;
 }
 
 
