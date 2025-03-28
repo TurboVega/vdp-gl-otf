@@ -1,4 +1,8 @@
 /*
+  Created by Fabrizio Di Vittorio (fdivitto2013@gmail.com) - <http://www.fabgl.com>
+  Copyright (c) 2019-2022 Fabrizio Di Vittorio.
+  All rights reserved.
+* Please contact fdivitto2013@gmail.com if you need a commercial license.
 * This library and related software is available under GPL v3.
 
   FabGL is free software: you can redistribute it and/or modify
@@ -14,19 +18,13 @@
   You should have received a copy of the GNU General Public License
   along with FabGL.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-
 #pragma once
-
-
 
 /**
  * @file
  *
  * @brief This file contains fabgl::VGA64Controller definition.
  */
-
-
 #include <stdint.h>
 #include <stddef.h>
 #include <atomic>
@@ -41,47 +39,47 @@
 #include "fabutils.h"
 #include "devdrivers/swgenerator.h"
 #include "displaycontroller.h"
-#include "dispdrivers/vgapalettedcontroller.h"
-
-
-
-#define VGA64_LinesCount 4
-
-
-
+#include "dispdrivers/vgabasecontroller.h"
 
 namespace fabgl {
 
-
-
 /**
-* @brief Represents the VGA 64 colors bitmapped controller
+* @brief Represents the VGA bitmapped controller
 *
-* This controller works in the same way as other VGA controllers based on VGAPalettedController, but works with a framebuffer that is the
-* same as with VGAController, and does not actually support a palette.  This controller however supports "hardware sprites".
+* Use this class to set screen resolution and to associate VGA signals to ESP32 GPIO outputs.
 *
-* In contrast to other palette-based controllers, the performance impact of this controller has not been properly measured.
-* Benchmark testing seems to indicate performance essentially on-par with VGAController.
+* This example initializes VGA Controller with 64 colors at 640x350:
 *
-*
-* This example initializes VGA Controller with 64 colors (all visible at the same time) at 640x350:
-*
-*     fabgl::VGA64Controller displayController;
+*     fabgl::VGA64Controller VGA64Controller;
 *     // the default assigns GPIO22 and GPIO21 to Red, GPIO19 and GPIO18 to Green, GPIO5 and GPIO4 to Blue, GPIO23 to HSync and GPIO15 to VSync
-*     displayController.begin();
-*     displayController.setResolution(VGA_640x350_70Hz);
+*     VGA64Controller.begin();
+*     VGA64Controller.setResolution(VGA_640x350_70Hz);
+*
+* This example initializes VGA Controller with 8 colors (5 GPIOs used) and 640x350 resolution:
+*
+*     // Assign GPIO22 to Red, GPIO21 to Green, GPIO19 to Blue, GPIO18 to HSync and GPIO5 to VSync
+*     VGA64Controller.begin(GPIO_NUM_22, GPIO_NUM_21, GPIO_NUM_19, GPIO_NUM_18, GPIO_NUM_5);
+*
+*     // Set 640x350@70Hz resolution
+*     VGA64Controller.setResolution(VGA_640x350_70Hz);
+*
+* This example initializes VGA Controller with 64 colors (8 GPIOs used) and 640x350 resolution:
+*
+*     // Assign GPIO22 and GPIO21 to Red, GPIO19 and GPIO18 to Green, GPIO5 and GPIO4 to Blue, GPIO23 to HSync and GPIO15 to VSync
+*     VGA64Controller.begin(GPIO_NUM_22, GPIO_NUM_21, GPIO_NUM_19, GPIO_NUM_18, GPIO_NUM_5, GPIO_NUM_4, GPIO_NUM_23, GPIO_NUM_15);
+*
+*     // Set 640x350@70Hz resolution
+*     VGA64Controller.setResolution(VGA_640x350_70Hz);
 */
-class VGA64Controller : public VGAPalettedController {
+class VGA64Controller : public VGABaseController {
 
-public:
+  public:
 
   VGA64Controller();
 
   // unwanted methods
-  VGA64Controller(VGA64Controller const&) = delete;
+  VGA64Controller(VGA64Controller const&)   = delete;
   void operator=(VGA64Controller const&)  = delete;
-
-
   /**
    * @brief Returns the singleton instance of VGA64Controller class
    *
@@ -89,136 +87,37 @@ public:
    */
   static VGA64Controller * instance() { return s_instance; }
 
-  void readScreen(Rect const & rect, RGB888 * destBuf);
-
-  /**
-   * @brief Determines color of specified palette item
-   *
-   * @param index Palette item (0..15)
-   * @param color Color to assign to this item
-   *
-   * Example:
-   *
-   *     // Color item 0 is pure Red
-   *     displayController.setPaletteItem(0, RGB888(255, 0, 0));
-   */
-  void setPaletteItem(int index, RGB888 const & color);
-
-
-protected:
-
-  void setupDefaultPalette();
-
-  void packSignals(int index, uint8_t packed222, void * signals) {};
-
-
-private:
-
-  // methods to get lambdas to get/set pixels
-  std::function<uint8_t(RGB888 const &)> getPixelLambda(PaintMode mode);
-  std::function<void(int X, int Y, uint8_t colorIndex)> setPixelLambda(PaintMode mode);
-  std::function<void(uint8_t * row, int x, uint8_t colorIndex)> setRowPixelLambda(PaintMode mode);
-  std::function<void(int Y, int X1, int X2, uint8_t colorIndex)> fillRowLambda(PaintMode mode);
+  // abstract method of BitmappedDisplayController
+  void suspendBackgroundPrimitiveExecution();
 
   // abstract method of BitmappedDisplayController
-  void setPixelAt(PixelDesc const & pixelDesc, Rect & updateRect);
+  void resumeBackgroundPrimitiveExecution();
 
   // abstract method of BitmappedDisplayController
-  void drawEllipse(Size const & size, Rect & updateRect);
+  NativePixelFormat nativePixelFormat() { return NativePixelFormat::SBGR2222; }
 
-  // abstract method of BitmappedDisplayController
-  void drawArc(Rect const & rect, Rect & updateRect);
+  // import "modeline" version of setResolution
+  using VGABaseController::setResolution;
 
-  // abstract method of BitmappedDisplayController
-  void fillSegment(Rect const & rect, Rect & updateRect);
+  void setResolution(VGATimings const& timings, int viewPortWidth = -1, int viewPortHeight = -1, bool doubleBuffered = false);
 
-  // abstract method of BitmappedDisplayController
-  void fillSector(Rect const & rect, Rect & updateRect);
+  protected:
 
-  // abstract method of BitmappedDisplayController
-  void clear(Rect & updateRect);
+  void packSignals(int index, uint8_t packed222, void * signals);
 
-  // abstract method of BitmappedDisplayController
-  void VScroll(int scroll, Rect & updateRect);
+  private:
 
-  // abstract method of BitmappedDisplayController
-  void HScroll(int scroll, Rect & updateRect);
+  void init();
 
-  // abstract method of BitmappedDisplayController
-  void drawGlyph(Glyph const & glyph, GlyphOptions glyphOptions, RGB888 penColor, RGB888 brushColor, Rect & updateRect);
+  void allocateViewPort();
+  void onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow);
 
-  // abstract method of BitmappedDisplayController
-  void invertRect(Rect const & rect, Rect & updateRect);
+  static void VSyncInterrupt(void * arg);
 
-  // abstract method of BitmappedDisplayController
-  void copyRect(Rect const & source, Rect & updateRect);
+  static VGA64Controller * s_instance;
 
-  // abstract method of BitmappedDisplayController
-  void swapFGBG(Rect const & rect, Rect & updateRect);
-
-  // abstract method of BitmappedDisplayController
-  void rawDrawBitmap_Native(int destX, int destY, Bitmap const * bitmap, int X1, int Y1, int XCount, int YCount);
-
-  // abstract method of BitmappedDisplayController
-  void rawDrawBitmap_Mask(int destX, int destY, Bitmap const * bitmap, void * saveBackground, int X1, int Y1, int XCount, int YCount);
-
-  // abstract method of BitmappedDisplayController
-  void rawDrawBitmap_RGBA2222(int destX, int destY, Bitmap const * bitmap, void * saveBackground, int X1, int Y1, int XCount, int YCount);
-
-  // abstract method of BitmappedDisplayController
-  void rawDrawBitmap_RGBA8888(int destX, int destY, Bitmap const * bitmap, void * saveBackground, int X1, int Y1, int XCount, int YCount);
-
-  // abstract method of BitmappedDisplayController
-  void rawCopyToBitmap(int srcX, int srcY, int width, void * saveBuffer, int X1, int Y1, int XCount, int YCount);
-
-  // abstract method of BitmappedDisplayController
-  void rawDrawBitmapWithMatrix_Mask(int destX, int destY, Rect & drawingRect, Bitmap const * bitmap, const float * invMatrix);
-
-  // abstract method of BitmappedDisplayController
-  void rawDrawBitmapWithMatrix_RGBA2222(int destX, int destY, Rect & drawingRect, Bitmap const * bitmap, const float * invMatrix);
-
-  // abstract method of BitmappedDisplayController
-  void rawDrawBitmapWithMatrix_RGBA8888(int destX, int destY, Rect & drawingRect, Bitmap const * bitmap, const float * invMatrix);
-
-  // abstract method of BitmappedDisplayController
-  void fillRow(int y, int x1, int x2, RGB888 color);
-
-  void rawFillRow(int y, int x1, int x2, uint8_t colorIndex);
-
-  void rawORRow(int y, int x1, int x2, uint8_t colorIndex);
-
-  void rawANDRow(int y, int x1, int x2, uint8_t colorIndex);
-
-  void rawXORRow(int y, int x1, int x2, uint8_t colorIndex);
-
-  void rawInvertRow(int y, int x1, int x2);
-
-  void rawCopyRow(int x1, int x2, int srcY, int dstY);
-
-  void swapRows(int yA, int yB, int x1, int x2);
-
-  // abstract method of BitmappedDisplayController
-  void absDrawLine(int X1, int Y1, int X2, int Y2, RGB888 color);
-
-  // abstract method of BitmappedDisplayController
-  int getBitmapSavePixelSize() { return 1; }
-
-  static void ISRHandler(void * arg);
-
-
-  static VGA64Controller *    s_instance;
-
-  volatile uint16_t           m_packedPaletteIndexPair_to_signals[1];
+  volatile int16_t       m_maxVSyncISRTime; // Maximum us VSync interrupt routine can run
 
 };
 
-
-
 } // end of namespace
-
-
-
-
-
-
-

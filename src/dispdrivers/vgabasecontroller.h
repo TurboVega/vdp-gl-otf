@@ -2,11 +2,7 @@
   Created by Fabrizio Di Vittorio (fdivitto2013@gmail.com) - <http://www.fabgl.com>
   Copyright (c) 2019-2022 Fabrizio Di Vittorio.
   All rights reserved.
-
-
 * Please contact fdivitto2013@gmail.com if you need a commercial license.
-
-
 * This library and related software is available under GPL v3.
 
   FabGL is free software: you can redistribute it and/or modify
@@ -22,19 +18,13 @@
   You should have received a copy of the GNU General Public License
   along with FabGL.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-
 #pragma once
-
-
 
 /**
  * @file
  *
  * @brief This file contains fabgl::VGABaseController definition.
  */
-
-
 #include <stdint.h>
 #include <stddef.h>
 #include <atomic>
@@ -50,8 +40,6 @@
 #include "displaycontroller.h"
 
 
-
-
 #define VGA_RED_BIT    0
 #define VGA_GREEN_BIT  2
 #define VGA_BLUE_BIT   4
@@ -59,8 +47,6 @@
 #define VGA_VSYNC_BIT  7
 
 #define VGA_SYNC_MASK  ((1 << VGA_HSYNC_BIT) | (1 << VGA_VSYNC_BIT))
-
-
 // pixel 0 = byte 2, pixel 1 = byte 3, pixel 2 = byte 0, pixel 3 = byte 1 :
 // pixel : 0  1  2  3  4  5  6  7  8  9 10 11 ...etc...
 // byte  : 2  3  0  1  6  7  4  5 10 11  8  9 ...etc...
@@ -72,17 +58,11 @@
 #define VGA_PIXEL(X, Y)          VGA_PIXELINROW(m_viewPort[(Y)], X)
 #define VGA_INVERT_PIXEL(X, Y)   { auto px = &VGA_PIXEL((X), (Y)); *px = ~(*px ^ VGA_SYNC_MASK); }
 
-
-
 namespace fabgl {
-
-
 
 #if FABGLIB_VGAXCONTROLLER_PERFORMANCE_CHECK
   extern volatile uint64_t s_vgapalctrlcycles;
 #endif
-
-
 
 /** \ingroup Enumerations
  * @brief Represents one of the four blocks of horizontal or vertical line
@@ -93,8 +73,6 @@ enum VGAScanStart {
   BackPorch,    /**< Horizontal line sequence is: BACKPORCH -> VISIBLEAREA -> FRONTPORCH -> SYNC */
   VisibleArea   /**< Horizontal line sequence is: VISIBLEAREA -> FRONTPORCH -> SYNC -> BACKPORCH */
 };
-
-
 /** @brief Specifies the VGA timings. This is a modeline decoded. */
 struct VGATimings {
   char          label[22];       /**< Resolution text description */
@@ -113,8 +91,6 @@ struct VGATimings {
   uint8_t       multiScanBlack;  /**< 0 = Additional rows are the repetition of the first. 1 = Additional rows are blank. */
   VGAScanStart  HStartingBlock;  /**< Horizontal starting block. DetermineshHorizontal order of signals */
 };
-
-
 class VGABaseController : public GenericBitmappedDisplayController {
 
 public:
@@ -289,8 +265,6 @@ public:
   uint8_t createBlankRawPixel()                  { return m_HVSync; }
 
   uint     frameCounter = 0;
-
-
 protected:
 
   static void setupGPIO(gpio_num_t gpio, int bit, gpio_mode_t mode);
@@ -386,8 +360,6 @@ protected:
   bool                        m_processPrimitivesOnBlank;
 
 private:
-
-
   // bits per channel on VGA output
   // 1 = 8 colors, 2 = 64 colors, set by begin()
   int                    m_bitsPerChannel;
@@ -412,12 +384,6 @@ private:
   int16_t                m_rawFrameHeight;
 
 };
-
-
-
-
-
-
 
 
 } // end of namespace

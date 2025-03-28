@@ -23,17 +23,13 @@
   along with FabGL.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #pragma once
-
-
 
 /**
  * @file
  *
  * @brief This file contains fabgl::VGAPalettedController definition.
  */
-
 
 #include <stdint.h>
 #include <stddef.h>
@@ -51,15 +47,7 @@
 #include "displaycontroller.h"
 #include "dispdrivers/vgabasecontroller.h"
 
-
-
-
 namespace fabgl {
-
-
-
-
-
 
 /**
 * @brief Represents the base class for paletted bitmapped controllers like VGA16Controller, VGA8Controller, etc..
@@ -123,11 +111,7 @@ private:
   int                         m_viewPortRatioDiv;
   int                         m_viewPortRatioMul;
   intr_handler_t              m_isrHandler;
-
-
 };
-
-
 
 } // end of namespace
 

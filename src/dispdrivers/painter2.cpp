@@ -145,6 +145,12 @@ std::function<void(int Y, int X1, int X2, uint8_t colorIndex)> Painter2::fillRow
   }
 }
 
+void Painter2::setupDefaultPalette()
+{
+  setPaletteItem(0, RGB888(0, 0, 0));       // 0: black
+  setPaletteItem(1, RGB888(255, 255, 255)); // 1: white
+}
+
 void Painter2::setPixelAt(PixelDesc const & pixelDesc, Rect & updateRect) {
   auto paintMode = paintState().paintOptions.mode;
   genericSetPixelAt(pixelDesc, updateRect, getPixelLambda(paintMode), setPixelLambda(paintMode));
@@ -427,6 +433,9 @@ void Painter2::copyRect(Rect const & source, Rect & updateRect) {
                  );
 }
 
+void Painter2::readScreen(Rect const & rect, RGB222 * destBuf) {
+}
+
 // no bounds check is done!
 void Painter2::readScreen(Rect const & rect, RGB888 * destBuf) {
   for (int y = rect.Y1; y <= rect.Y2; ++y) {
@@ -436,6 +445,12 @@ void Painter2::readScreen(Rect const & rect, RGB888 * destBuf) {
       *destBuf = RGB888(v.R * 85, v.G * 85, v.B * 85);  // 85 x 3 = 255
     }
   }
+}
+
+void Painter2::writeScreen(Rect const & rect, RGB888 * destBuf) {
+}
+
+void Painter2::writeScreen(Rect const & rect, RGB222 * destBuf) {
 }
 
 void Painter2::rawDrawBitmap_Native(int destX, int destY, Bitmap const * bitmap, int X1, int Y1, int XCount, int YCount) {

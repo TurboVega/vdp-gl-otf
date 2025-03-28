@@ -45,7 +45,13 @@ class Painter {
   Painter();
   ~Painter();
 
+  virtual void readScreen(Rect const & rect, RGB222 * destBuf);
+
   virtual void readScreen(Rect const & rect, RGB888 * destBuf);
+
+  virtual void writeScreen(Rect const & rect, RGB222 * srcBuf);
+
+  virtual void writeScreen(Rect const & rect, RGB888 * srcBuf);
 
   virtual void setPixelAt(PixelDesc const & pixelDesc, Rect & updateRect);
 
@@ -1565,15 +1571,10 @@ class Painter {
 
   RGB888 getActualBrushColor();
 
-  virtual void packSignals(int index, uint8_t packed222, void * signals) = 0;
-
   void * getSignalsForScanline(int scanline);
 
   // returns "static" version of m_viewPort
-  static uint8_t * sgetScanline(int y)                  { return (uint8_t*) s_viewPort[y]; }
-
-  // abstract method of BitmappedDisplayController
-  NativePixelFormat nativePixelFormat()                 { return m_nativePixelFormat; }
+  uint8_t * sgetScanline(int y)                  { return (uint8_t*) m_viewPort[y]; }
 
   // Should be called after the palette is updated.
   void updateRGB2PaletteLUT();

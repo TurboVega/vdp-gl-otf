@@ -44,7 +44,13 @@ class Painter2 : public Painter {
   Painter2();
   ~Painter2();
 
+  virtual void readScreen(Rect const & rect, RGB222 * destBuf);
+
   virtual void readScreen(Rect const & rect, RGB888 * destBuf);
+
+  virtual void writeScreen(Rect const & rect, RGB222 * srcBuf);
+
+  virtual void writeScreen(Rect const & rect, RGB888 * srcBuf);
 
   virtual void setPixelAt(PixelDesc const & pixelDesc, Rect & updateRect);
 

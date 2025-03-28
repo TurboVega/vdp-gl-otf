@@ -603,9 +603,6 @@ public:
    */
   void setMouseCursorPos(int X, int Y);
 
-  virtual void readScreen(Rect const & rect, RGB888 * destBuf) = 0;
-
-
   // statics (used for common default properties)
 
   /**

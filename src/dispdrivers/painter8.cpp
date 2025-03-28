@@ -401,6 +401,9 @@ void Painter8::copyRect(Rect const & source, Rect & updateRect) {
                  );
 }
 
+void Painter8::readScreen(Rect const & rect, RGB222 * destBuf) {
+}
+
 // no bounds check is done!
 void Painter8::readScreen(Rect const & rect, RGB888 * destBuf) {
   for (int y = rect.Y1; y <= rect.Y2; ++y) {
@@ -410,6 +413,12 @@ void Painter8::readScreen(Rect const & rect, RGB888 * destBuf) {
       *destBuf = RGB888(v.R * 85, v.G * 85, v.B * 85);  // 85 x 3 = 255
     }
   }
+}
+
+void Painter8::writeScreen(Rect const & rect, RGB888 * destBuf) {
+}
+
+void Painter8::writeScreen(Rect const & rect, RGB222 * destBuf) {
 }
 
 void Painter8::rawDrawBitmap_Native(int destX, int destY, Bitmap const * bitmap, int X1, int Y1, int XCount, int YCount) {

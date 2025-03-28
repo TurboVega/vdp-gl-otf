@@ -36,7 +36,13 @@ class Painter64 : public Painter {
   Painter64();
   ~Painter64();
 
+  virtual void readScreen(Rect const & rect, RGB222 * destBuf);
+
   virtual void readScreen(Rect const & rect, RGB888 * destBuf);
+
+  virtual void writeScreen(Rect const & rect, RGB222 * srcBuf);
+
+  virtual void writeScreen(Rect const & rect, RGB888 * srcBuf);
 
   virtual void setPixelAt(PixelDesc const & pixelDesc, Rect & updateRect);
 
@@ -97,6 +103,8 @@ class Painter64 : public Painter {
   virtual void absDrawLine(int X1, int Y1, int X2, int Y2, RGB888 color);
 
   virtual int getPaletteSize() { return (int) NativePixelFormat::PALETTE64; };
+
+  virtual void packSignals(int index, uint8_t packed222, void * signals);
 
   protected:
 
