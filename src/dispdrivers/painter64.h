@@ -102,7 +102,7 @@ class Painter64 : public Painter {
 
   virtual void absDrawLine(int X1, int Y1, int X2, int Y2, RGB888 color);
 
-  virtual int getPaletteSize() { return (int) NativePixelFormat::PALETTE64; };
+  virtual int getPaletteSize() { return 64; } // for NativePixelFormat::PALETTE64
 
   virtual void packSignals(int index, uint8_t packed222, void * signals);
 

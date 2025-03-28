@@ -110,7 +110,7 @@ class Painter2 : public Painter {
 
   virtual void absDrawLine(int X1, int Y1, int X2, int Y2, RGB888 color);
 
-  virtual int getPaletteSize() { return (int) NativePixelFormat::PALETTE2; };
+  virtual int getPaletteSize() { return 2; } // for NativePixelFormat::PALETTE2
 
   protected:
 

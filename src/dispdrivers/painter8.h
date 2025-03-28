@@ -110,7 +110,7 @@ class Painter8 : public VGAPalettedController {
 
   virtual void absDrawLine(int X1, int Y1, int X2, int Y2, RGB888 color);
 
-  virtual int getPaletteSize() { return (int) NativePixelFormat::PALETTE8; };
+  virtual int getPaletteSize() { return 8; } // for NativePixelFormat::PALETTE8
 
   virtual void packSignals(int index, uint8_t packed222, void * signals);
 

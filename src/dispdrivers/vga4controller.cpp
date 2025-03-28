@@ -51,6 +51,7 @@ VGA4Controller::VGA4Controller()
   : VGAPalettedController(VGA4_LinesCount, VGA4_COLUMNSQUANTUM, NativePixelFormat::PALETTE4, 4, 1, ISRHandler, 256 * sizeof(uint32_t))
 {
   s_instance = this;
+  m_painter = new Painter4();
 }
 
 VGA4Controller::~VGA4Controller()

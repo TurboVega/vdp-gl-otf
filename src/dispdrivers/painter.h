@@ -116,9 +116,9 @@ class Painter {
 
   // methods to get lambdas to get/set pixels
   std::function<uint8_t(RGB888 const &)> getPixelLambda(PaintMode mode) = 0;
-  std::function<virtual void(int X, int Y, uint8_t colorIndex)> setPixelLambda(PaintMode mode) = 0;
-  std::function<virtual void(uint8_t * row, int x, uint8_t colorIndex)> setRowPixelLambda(PaintMode mode) = 0;
-  std::function<virtual void(int Y, int X1, int X2, uint8_t colorIndex)> fillRowLambda(PaintMode mode) = 0;
+  std::function<void(int X, int Y, uint8_t colorIndex)> setPixelLambda(PaintMode mode) = 0;
+  std::function<void(uint8_t * row, int x, uint8_t colorIndex)> setRowPixelLambda(PaintMode mode) = 0;
+  std::function<void(int Y, int X1, int X2, uint8_t colorIndex)> fillRowLambda(PaintMode mode) = 0;
 
   template <typename TPreparePixel, typename TRawSetPixel>
   void genericSetPixelAt(PixelDesc const & pixelDesc, Rect & updateRect, TPreparePixel preparePixel, TRawSetPixel rawSetPixel)

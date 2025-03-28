@@ -65,6 +65,11 @@ VGABaseController::VGABaseController()
 {
 }
 
+VGABaseController::~VGABaseController()
+{
+  delete m_painter;
+}
+
 
 void VGABaseController::init()
 {

@@ -37,7 +37,7 @@
 #include "fabglconf.h"
 #include "fabutils.h"
 #include "devdrivers/swgenerator.h"
-#include "displaycontroller.h"
+#include "painter.h"
 
 
 #define VGA_RED_BIT    0
@@ -97,9 +97,13 @@ public:
 
   VGABaseController();
 
+  ~VGABaseController();
+
   // unwanted methods
   VGABaseController(VGABaseController const&) = delete;
   void operator=(VGABaseController const&)    = delete;
+
+  Painter * getPainter() { return m_painter; } // gets a pointer to the painter
 
   /**
    * @brief This is the 64 colors (8 GPIOs) initializer.
@@ -263,6 +267,7 @@ public:
   uint8_t createBlankRawPixel()                  { return m_HVSync; }
 
   uint     frameCounter = 0;
+
 protected:
 
   static void setupGPIO(gpio_num_t gpio, int bit, gpio_mode_t mode);
@@ -356,6 +361,8 @@ protected:
   // true = allowed time to process primitives is limited to the vertical blank. Slow, but avoid flickering
   // false = allowed time is the half of an entire frame. Fast, but may flick
   bool                        m_processPrimitivesOnBlank;
+
+  Painter *                   m_painter;
 
 private:
   // bits per channel on VGA output

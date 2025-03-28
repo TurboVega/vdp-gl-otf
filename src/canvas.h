@@ -37,13 +37,9 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
 #include "displaycontroller.h"
 
-
 namespace fabgl {
-
-
 
 /**
 * @brief A class with a set of drawing methods.

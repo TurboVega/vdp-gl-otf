@@ -45,8 +45,6 @@
 
 namespace fabgl {
 
-
-
 class CollisionDetector;
 
 class QuadTree;

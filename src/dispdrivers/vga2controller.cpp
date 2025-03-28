@@ -72,7 +72,9 @@ VGA2Controller::VGA2Controller()
   : VGAPalettedController(VGA2_LinesCount, VGA2_COLUMNSQUANTUM, NativePixelFormat::PALETTE2, 8, 1, ISRHandler, 256 * sizeof(uint64_t))
 {
   s_instance = this;
+  m_painter = new Painter2();
 }
+
 VGA2Controller::~VGA2Controller()
 {
   s_instance = nullptr;

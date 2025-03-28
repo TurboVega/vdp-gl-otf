@@ -43,11 +43,7 @@
 #include "comdrivers/ps2device.h"
 #include "displaycontroller.h"
 
-
 namespace fabgl {
-
-
-
 
 /**
  * @brief Describes mouse movement and buttons status.

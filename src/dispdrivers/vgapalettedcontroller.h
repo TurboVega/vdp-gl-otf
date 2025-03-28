@@ -44,7 +44,6 @@
 #include "fabglconf.h"
 #include "fabutils.h"
 #include "devdrivers/swgenerator.h"
-#include "displaycontroller.h"
 #include "dispdrivers/vgabasecontroller.h"
 
 namespace fabgl {

@@ -30,13 +30,9 @@
 #include "comdrivers/ps2controller.h"
 #include "displaycontroller.h"
 
-
 #pragma GCC optimize ("O2")
 
-
-
 namespace fabgl {
-
 
 bool Mouse::s_quickCheckHardware = false;
 

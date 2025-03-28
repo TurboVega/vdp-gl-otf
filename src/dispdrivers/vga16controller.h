@@ -38,7 +38,6 @@
 #include "fabglconf.h"
 #include "fabutils.h"
 #include "devdrivers/swgenerator.h"
-#include "displaycontroller.h"
 #include "dispdrivers/vgapalettedcontroller.h"
 
 #define VGA16_LinesCount 4
