@@ -35,6 +35,7 @@
 
 #include "paintdefs.h"
 #include <math.h>
+#include <functional>
 
 namespace fabgl {
 

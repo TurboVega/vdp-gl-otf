@@ -73,7 +73,7 @@ public:
 
   void setResolution(VGATimings const& timings, int viewPortWidth = -1, int viewPortHeight = -1, bool doubleBuffered = false);
 
-  virtual int colorsCount()      { return getPaletteSize(); }
+  NativePixelFormat nativePixelFormat() { return m_nativePixelFormat; }
 
   /**
    * @brief Determines the maximum time allowed to process primitives
