@@ -32,7 +32,7 @@
  */
 
 #include "paintdefs.h"
-#include <std_abs.h>
+#include <math.h>
 
 namespace fabgl {
 

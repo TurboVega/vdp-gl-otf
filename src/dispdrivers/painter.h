@@ -37,6 +37,7 @@
 #include <math.h>
 #include <functional>
 #include <vector>
+#include <dspm_mult.h>
 #include "fabglconf.h"
 
 namespace fabgl {
@@ -1575,6 +1576,8 @@ class Painter {
   // Should be called after the palette is updated.
   void updateRGB2PaletteLUT();
 
+  public:
+
   /**
    * @brief Creates a new palette (signal block) with a 16-bit ID, copying the default palette
    * 
@@ -1623,6 +1626,8 @@ class Painter {
    */
   void updateSignalList(uint16_t * rawList, int entries);
 
+  protected:
+  
   // Painter data members
 
   uint8_t **          m_viewPort;
