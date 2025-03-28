@@ -81,9 +81,9 @@ static inline __attribute__((always_inline)) void VGA4_XORPIXEL(int x, int y, in
   row[brow] ^= (value << shift);
 }
 
-#define VGA4_GETPIXEL(x, y)                 VGA4_GETPIXELINROW((uint8_t*)Painter4::s_viewPort[(y)], (x))
+#define VGA4_GETPIXEL(x, y)                 VGA4_GETPIXELINROW((uint8_t*)Painter4::m_viewPort[(y)], (x))
 
-#define VGA4_INVERT_PIXEL(x, y)             VGA4_INVERTPIXELINROW((uint8_t*)Painter4::s_viewPort[(y)], (x))
+#define VGA4_INVERT_PIXEL(x, y)             VGA4_INVERTPIXELINROW((uint8_t*)Painter4::m_viewPort[(y)], (x))
 
 #define VGA4_COLUMNSQUANTUM 16
 

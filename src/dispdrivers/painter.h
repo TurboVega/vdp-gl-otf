@@ -37,6 +37,7 @@
 #include <math.h>
 #include <functional>
 #include <vector>
+#include <unordered_map>
 #include <dspm_mult.h>
 #include "fabglconf.h"
 
@@ -49,6 +50,8 @@ class Painter {
   Painter();
   ~Painter();
 
+  void setViewPort(uint8_t** rows, uint32_t width, uint32_t height);
+  
   virtual void readScreen(Rect const & rect, RGB222 * destBuf) = 0;
 
   virtual void readScreen(Rect const & rect, RGB888 * destBuf) = 0;
@@ -1627,7 +1630,7 @@ class Painter {
   void updateSignalList(uint16_t * rawList, int entries);
 
   protected:
-  
+
   // Painter data members
 
   uint8_t **          m_viewPort;

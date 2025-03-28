@@ -75,9 +75,9 @@ static inline __attribute__((always_inline)) void VGA16_XORPIXEL(int x, int y, i
   row[brow] ^= (x & 1) ? value : (value << 4);
 }
 
-#define VGA16_GETPIXEL(x, y)                 VGA16_GETPIXELINROW((uint8_t*)Painter16::s_viewPort[(y)], (x))
+#define VGA16_GETPIXEL(x, y)                 VGA16_GETPIXELINROW((uint8_t*)Painter16::m_viewPort[(y)], (x))
 
-#define VGA16_INVERT_PIXEL(x, y)             VGA16_INVERTPIXELINROW((uint8_t*)Painter16::s_viewPort[(y)], (x))
+#define VGA16_INVERT_PIXEL(x, y)             VGA16_INVERTPIXELINROW((uint8_t*)Painter16::m_viewPort[(y)], (x))
 
 #define VGA16_COLUMNSQUANTUM 16
 

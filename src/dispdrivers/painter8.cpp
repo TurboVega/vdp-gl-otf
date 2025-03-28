@@ -89,9 +89,9 @@ static inline __attribute__((always_inline)) void VGA8_XORPIXEL(int x, int y, in
   *bits24 ^= (value << shift);
 }
 
-#define VGA8_GETPIXEL(x, y)                 VGA8_GETPIXELINROW((uint8_t*)Painter8::s_viewPort[(y)], (x))
+#define VGA8_GETPIXEL(x, y)                 VGA8_GETPIXELINROW((uint8_t*)Painter8::m_viewPort[(y)], (x))
 
-#define VGA8_INVERT_PIXEL(x, y)             VGA8_INVERTPIXELINROW((uint8_t*)Painter8::s_viewPort[(y)], (x))
+#define VGA8_INVERT_PIXEL(x, y)             VGA8_INVERTPIXELINROW((uint8_t*)Painter8::m_viewPort[(y)], (x))
 
 #define VGA8_COLUMNSQUANTUM 16
 

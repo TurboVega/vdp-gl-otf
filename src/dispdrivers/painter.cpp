@@ -48,6 +48,12 @@ Painter::Painter() {
 Painter::~Painter() {
 }
 
+void Painter::setViewPort(uint8_t** rows, uint32_t width, uint32_t height) {
+  m_viewPort = rows;
+  m_viewPortWidth = width;
+  m_viewPortHeight = height;
+}
+
 Painter::postConstruct() {
   createPalette(0);
   uint16_t signalList[2] = { 0, 0 };

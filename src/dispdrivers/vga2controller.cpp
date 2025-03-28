@@ -59,9 +59,9 @@ static inline __attribute__((always_inline)) void VGA2_SETPIXEL(int x, int y, in
   row[brow] ^= (-value ^ row[brow]) & (0x80 >> (x & 7));
 }
 
-#define VGA2_GETPIXEL(x, y)                 VGA2_GETPIXELINROW((uint8_t*)VGA2Controller::s_viewPort[(y)], (x))
+#define VGA2_GETPIXEL(x, y)                 VGA2_GETPIXELINROW((uint8_t*)VGA2Controller::m_viewPort[(y)], (x))
 
-#define VGA2_INVERT_PIXEL(x, y)             VGA2_INVERTPIXELINROW((uint8_t*)VGA2Controller::s_viewPort[(y)], (x))
+#define VGA2_INVERT_PIXEL(x, y)             VGA2_INVERTPIXELINROW((uint8_t*)VGA2Controller::m_viewPort[(y)], (x))
 #define VGA2_COLUMNSQUANTUM 16
 
 /*************************************************************************************/
