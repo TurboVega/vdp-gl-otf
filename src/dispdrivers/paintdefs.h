@@ -37,8 +37,25 @@
 
 namespace fabgl {
 
-#define TORAD(a) ((a) * M_PI / 180.)
+#define VGA_RED_BIT    0
+#define VGA_GREEN_BIT  2
+#define VGA_BLUE_BIT   4
+#define VGA_HSYNC_BIT  6
+#define VGA_VSYNC_BIT  7
 
+#define VGA_SYNC_MASK  ((1 << VGA_HSYNC_BIT) | (1 << VGA_VSYNC_BIT))
+// pixel 0 = byte 2, pixel 1 = byte 3, pixel 2 = byte 0, pixel 3 = byte 1 :
+// pixel : 0  1  2  3  4  5  6  7  8  9 10 11 ...etc...
+// byte  : 2  3  0  1  6  7  4  5 10 11  8  9 ...etc...
+// dword : 0           1           2          ...etc...
+// Thanks to https://github.com/paulscottrobson for the new macro. Before was: (row[((X) & 0xFFFC) + ((2 + (X)) & 3)])
+#define VGA_PIXELINROW(row, X)   (row[(X) ^ 2])
+
+// requires variables: m_viewPort
+#define VGA_PIXEL(X, Y)          VGA_PIXELINROW(m_viewPort[(Y)], X)
+#define VGA_INVERT_PIXEL(X, Y)   { auto px = &VGA_PIXEL((X), (Y)); *px = ~(*px ^ VGA_SYNC_MASK); }
+
+#define TORAD(a) ((a) * M_PI / 180.)
 
 // Integer square root by Halleck's method, with Legalize's speedup
 int isqrt (int x);

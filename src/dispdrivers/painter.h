@@ -36,6 +36,8 @@
 #include "paintdefs.h"
 #include <math.h>
 #include <functional>
+#include <vector>
+#include "fabglconf.h"
 
 namespace fabgl {
 
@@ -46,71 +48,71 @@ class Painter {
   Painter();
   ~Painter();
 
-  virtual void readScreen(Rect const & rect, RGB222 * destBuf);
+  virtual void readScreen(Rect const & rect, RGB222 * destBuf) = 0;
 
-  virtual void readScreen(Rect const & rect, RGB888 * destBuf);
+  virtual void readScreen(Rect const & rect, RGB888 * destBuf) = 0;
 
-  virtual void writeScreen(Rect const & rect, RGB222 * srcBuf);
+  virtual void writeScreen(Rect const & rect, RGB222 * srcBuf) = 0;
 
-  virtual void writeScreen(Rect const & rect, RGB888 * srcBuf);
+  virtual void writeScreen(Rect const & rect, RGB888 * srcBuf) = 0;
 
-  virtual void setPixelAt(PixelDesc const & pixelDesc, Rect & updateRect);
+  virtual void setPixelAt(PixelDesc const & pixelDesc, Rect & updateRect) = 0;
 
-  virtual void drawEllipse(Size const & size, Rect & updateRect);
+  virtual void drawEllipse(Size const & size, Rect & updateRect) = 0;
 
-  virtual void drawArc(Rect const & rect, Rect & updateRect);
+  virtual void drawArc(Rect const & rect, Rect & updateRect) = 0;
 
-  virtual void fillSegment(Rect const & rect, Rect & updateRect);
+  virtual void fillSegment(Rect const & rect, Rect & updateRect) = 0;
 
-  virtual void fillSector(Rect const & rect, Rect & updateRect);
+  virtual void fillSector(Rect const & rect, Rect & updateRect) = 0;
 
-  virtual void clear(Rect & updateRect);
+  virtual void clear(Rect & updateRect) = 0;
 
-  virtual void VScroll(int scroll, Rect & updateRect);
+  virtual void VScroll(int scroll, Rect & updateRect) = 0;
 
-  virtual void HScroll(int scroll, Rect & updateRect);
+  virtual void HScroll(int scroll, Rect & updateRect) = 0;
 
-  virtual void drawGlyph(Glyph const & glyph, GlyphOptions glyphOptions, RGB888 penColor, RGB888 brushColor, Rect & updateRect);
+  virtual void drawGlyph(Glyph const & glyph, GlyphOptions glyphOptions, RGB888 penColor, RGB888 brushColor, Rect & updateRect) = 0;
 
-  virtual void invertRect(Rect const & rect, Rect & updateRect);
+  virtual void invertRect(Rect const & rect, Rect & updateRect) = 0;
 
-  virtual void copyRect(Rect const & source, Rect & updateRect);
+  virtual void copyRect(Rect const & source, Rect & updateRect) = 0;
 
-  virtual void swapFGBG(Rect const & rect, Rect & updateRect);
+  virtual void swapFGBG(Rect const & rect, Rect & updateRect) = 0;
 
-  virtual void rawDrawBitmap_Native(int destX, int destY, Bitmap const * bitmap, int X1, int Y1, int XCount, int YCount);
+  virtual void rawDrawBitmap_Native(int destX, int destY, Bitmap const * bitmap, int X1, int Y1, int XCount, int YCount) = 0;
 
-  virtual void rawDrawBitmap_Mask(int destX, int destY, Bitmap const * bitmap, void * saveBackground, int X1, int Y1, int XCount, int YCount);
+  virtual void rawDrawBitmap_Mask(int destX, int destY, Bitmap const * bitmap, void * saveBackground, int X1, int Y1, int XCount, int YCount) = 0;
 
-  virtual void rawDrawBitmap_RGBA2222(int destX, int destY, Bitmap const * bitmap, void * saveBackground, int X1, int Y1, int XCount, int YCount);
+  virtual void rawDrawBitmap_RGBA2222(int destX, int destY, Bitmap const * bitmap, void * saveBackground, int X1, int Y1, int XCount, int YCount) = 0;
 
-  virtual void rawDrawBitmap_RGBA8888(int destX, int destY, Bitmap const * bitmap, void * saveBackground, int X1, int Y1, int XCount, int YCount);
+  virtual void rawDrawBitmap_RGBA8888(int destX, int destY, Bitmap const * bitmap, void * saveBackground, int X1, int Y1, int XCount, int YCount) = 0;
 
-  virtual void rawCopyToBitmap(int srcX, int srcY, int width, void * saveBuffer, int X1, int Y1, int XCount, int YCount);
+  virtual void rawCopyToBitmap(int srcX, int srcY, int width, void * saveBuffer, int X1, int Y1, int XCount, int YCount) = 0;
 
-  virtual void rawDrawBitmapWithMatrix_Mask(int destX, int destY, Rect & drawingRect, Bitmap const * bitmap, const float * invMatrix);
+  virtual void rawDrawBitmapWithMatrix_Mask(int destX, int destY, Rect & drawingRect, Bitmap const * bitmap, const float * invMatrix) = 0;
 
-  virtual void rawDrawBitmapWithMatrix_RGBA2222(int destX, int destY, Rect & drawingRect, Bitmap const * bitmap, const float * invMatrix);
+  virtual void rawDrawBitmapWithMatrix_RGBA2222(int destX, int destY, Rect & drawingRect, Bitmap const * bitmap, const float * invMatrix) = 0;
 
-  virtual void rawDrawBitmapWithMatrix_RGBA8888(int destX, int destY, Rect & drawingRect, Bitmap const * bitmap, const float * invMatrix);
+  virtual void rawDrawBitmapWithMatrix_RGBA8888(int destX, int destY, Rect & drawingRect, Bitmap const * bitmap, const float * invMatrix) = 0;
 
-  virtual void fillRow(int y, int x1, int x2, RGB888 color);
+  virtual void fillRow(int y, int x1, int x2, RGB888 color) = 0;
 
-  virtual void rawFillRow(int y, int x1, int x2, uint8_t colorIndex);
+  virtual void rawFillRow(int y, int x1, int x2, uint8_t colorIndex) = 0;
 
-  virtual void rawORRow(int y, int x1, int x2, uint8_t colorIndex);
+  virtual void rawORRow(int y, int x1, int x2, uint8_t colorIndex) = 0;
 
-  virtual void rawANDRow(int y, int x1, int x2, uint8_t colorIndex);
+  virtual void rawANDRow(int y, int x1, int x2, uint8_t colorIndex) = 0;
 
-  virtual void rawXORRow(int y, int x1, int x2, uint8_t colorIndex);
+  virtual void rawXORRow(int y, int x1, int x2, uint8_t colorIndex) = 0;
 
-  virtual void rawInvertRow(int y, int x1, int x2);
+  virtual void rawInvertRow(int y, int x1, int x2) = 0;
 
-  virtual void rawCopyRow(int x1, int x2, int srcY, int dstY);
+  virtual void rawCopyRow(int x1, int x2, int srcY, int dstY) = 0;
 
-  virtual void swapRows(int yA, int yB, int x1, int x2);
+  virtual void swapRows(int yA, int yB, int x1, int x2) = 0;
 
-  virtual void absDrawLine(int X1, int Y1, int X2, int Y2, RGB888 color);
+  virtual void absDrawLine(int X1, int Y1, int X2, int Y2, RGB888 color) = 0;
 
   protected:
 
@@ -1498,7 +1500,6 @@ class Painter {
 
     }
   }
-
 
 
   // Scroll is done copying and filling columns
