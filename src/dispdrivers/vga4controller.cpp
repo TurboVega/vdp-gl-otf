@@ -52,6 +52,7 @@ VGA4Controller::VGA4Controller()
 {
   s_instance = this;
   m_painter = new Painter4();
+  postConstruct();
 }
 
 VGA4Controller::~VGA4Controller()

@@ -370,7 +370,7 @@ void BitmappedDisplayController::setSprites(Sprite * sprites, int count, int spr
       }
       int reqBackBufferSize = 0;
       for (int i = 0; i < sprite->framesCount; ++i)
-        reqBackBufferSize = tmax(reqBackBufferSize, sprite->frames[i]->width * getBitmapSavePixelSize() * sprite->frames[i]->height);
+        reqBackBufferSize = tmax(reqBackBufferSize, sprite->frames[i]->width * sprite->frames[i]->height);
       if (reqBackBufferSize > 0)
         sprite->savedBackground = (uint8_t*) realloc(sprite->savedBackground, reqBackBufferSize);
     }
@@ -506,7 +506,7 @@ void BitmappedDisplayController::setMouseCursor(Cursor * cursor)
       m_mouseCursor.visible = true;
       m_mouseCursor.moveBy(-m_mouseHotspotX, -m_mouseHotspotY);
       if (!isDoubleBuffered())
-        m_mouseCursor.savedBackground = (uint8_t*) realloc(m_mouseCursor.savedBackground, cursor->bitmap.width * getBitmapSavePixelSize() * cursor->bitmap.height);
+        m_mouseCursor.savedBackground = (uint8_t*) realloc(m_mouseCursor.savedBackground, cursor->bitmap.width * cursor->bitmap.height);
     }
     refreshSprites();
   }

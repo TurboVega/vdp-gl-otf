@@ -60,6 +60,7 @@ VGA8Controller::VGA8Controller()
 {
   s_instance = this;
   m_painter = new Painter8();
+  postConstruct();
 }
 
 VGA8Controller::~VGA8Controller()

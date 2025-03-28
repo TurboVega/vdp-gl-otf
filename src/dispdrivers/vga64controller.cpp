@@ -46,6 +46,7 @@ VGA64Controller::VGA64Controller()
 {
   s_instance = this;
   m_painter = new Painter64();
+  postConstruct();
 }
 
 void VGA64Controller::init()

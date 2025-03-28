@@ -91,6 +91,7 @@ static inline __attribute__((always_inline)) void VGA4_XORPIXEL(int x, int y, in
 /* Painter4 definitions */
 
 Painter4::Painter4() {
+  postConstruct();
 }
 
 Painter4::~Painter4() {

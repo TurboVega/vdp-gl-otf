@@ -41,8 +41,6 @@
 #include "fabglconf.h"
 #include "displaycontroller.h"
 
-
-
 namespace fabgl {
 
 class CollisionDetector;

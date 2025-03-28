@@ -66,6 +66,7 @@ static inline __attribute__((always_inline)) void VGA2_SETPIXEL(int x, int y, in
 
 
 Painter2::Painter2() {
+  postConstruct();
 }
 
 Painter2::~Painter2() {

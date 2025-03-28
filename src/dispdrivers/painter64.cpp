@@ -35,6 +35,11 @@ namespace fabgl {
 /* Painter64 definitions */
 
 Painter64::Painter64() {
+  postConstruct();
+}
+
+Painter64::~Painter64() {
+  Painter::~Painter();
 }
 
 std::function<uint8_t(RGB888 const &)> Painter64::getPixelLambda(PaintMode mode) {

@@ -99,6 +99,7 @@ static inline __attribute__((always_inline)) void VGA8_XORPIXEL(int x, int y, in
 /* Painter8 definitions */
 
 Painter8::Painter8() {
+  postConstruct();
 }
 
 Painter8::~Painter8() {

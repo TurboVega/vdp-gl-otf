@@ -73,6 +73,7 @@ VGA2Controller::VGA2Controller()
 {
   s_instance = this;
   m_painter = new Painter2();
+  postConstruct();
 }
 
 VGA2Controller::~VGA2Controller()

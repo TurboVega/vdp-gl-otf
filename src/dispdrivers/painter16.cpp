@@ -87,6 +87,7 @@ static inline __attribute__((always_inline)) void VGA16_XORPIXEL(int x, int y, i
 Painter16 * Painter16::s_instance = nullptr;
 
 Painter16::Painter16() {
+  postConstruct();
 }
 
 Painter16::~Painter16() {

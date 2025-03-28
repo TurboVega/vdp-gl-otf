@@ -101,9 +101,6 @@ private:
   void checkViewPortSize();
   void onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow);
 
-  PaletteListItem * createSignalList(uint16_t * rawList, int entries, int row = 0);
-  void deleteSignalList(PaletteListItem * item);
-
   // configuration
   int                         m_columnsQuantum; // viewport width must be divisble by m_columnsQuantum
   NativePixelFormat           m_nativePixelFormat;

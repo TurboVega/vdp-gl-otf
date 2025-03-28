@@ -53,6 +53,7 @@ VGA16Controller::VGA16Controller()
 {
   s_instance = this;
   m_painter = new Painter16();
+  postConstruct();
 }
 
 VGA16Controller::~VGA16Controller()

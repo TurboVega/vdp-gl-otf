@@ -48,6 +48,13 @@ Painter::Painter() {
 Painter::~Painter() {
 }
 
+Painter::postConstruct() {
+  createPalette(0);
+  uint16_t signalList[2] = { 0, 0 };
+  m_signalList = getPainter()->createSignalList(signalList, 1);
+  m_currentSignalItem = m_signalList;
+}
+
 // parameters not checked
 void Painter::rawORRow(int y, int x1, int x2, uint8_t colorIndex)
 {

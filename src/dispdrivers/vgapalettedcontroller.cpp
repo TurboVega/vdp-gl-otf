@@ -71,12 +71,7 @@ VGAPalettedController::VGAPalettedController(int linesCount, int columnsQuantum,
   m_linesCount = linesCount;
   m_lines   = (volatile uint8_t**) heap_caps_malloc(sizeof(uint8_t*) * m_linesCount, MALLOC_CAP_32BIT | MALLOC_CAP_INTERNAL);
   m_palette = (RGB222*) heap_caps_malloc(sizeof(RGB222) * getPaletteSize(), MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
-  createPalette(0);
-  uint16_t signalList[2] = { 0, 0 };
-  m_signalList = createSignalList(signalList, 1);
-  m_currentSignalItem = m_signalList;
 }
-
 
 VGAPalettedController::~VGAPalettedController()
 {
