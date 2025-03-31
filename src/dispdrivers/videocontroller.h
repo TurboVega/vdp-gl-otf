@@ -40,12 +40,13 @@
  * @brief This file contains fabgl::VideoController definition.
  */
 
+#include <system_error>
 #include <functional>
 #include <vector>
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
-
+#include <atomic>
 #include <mat.h>
 #include <dspm_mult.h>
 
@@ -57,6 +58,13 @@
 #include "fabutils.h"
 
 #include "dispdrivers/painter.h"
+
+#include "driver/gpio.h"
+
+#include "devdrivers/swgenerator.h"
+
+#include <unordered_map>
+
 
 namespace fabgl {
 
@@ -361,6 +369,7 @@ enum VGAScanStart {
   BackPorch,    /**< Horizontal line sequence is: BACKPORCH -> VISIBLEAREA -> FRONTPORCH -> SYNC */
   VisibleArea   /**< Horizontal line sequence is: VISIBLEAREA -> FRONTPORCH -> SYNC -> BACKPORCH */
 };
+
 /** @brief Specifies the VGA timings. This is a modeline decoded. */
 struct VGATimings {
   char          label[22];       /**< Resolution text description */
@@ -386,10 +395,6 @@ struct VGATimings {
 class VideoController {
 
 public:
-
-  virtual void setResolution(char const * modeline, int viewPortWidth = -1, int viewPortHeight = -1, bool doubleBuffered = false) = 0;
-
-  virtual void begin() = 0;
 
   /**
    * @brief Determines the screen width in pixels.
@@ -439,13 +444,6 @@ public:
   virtual ~VideoController();
 
   Painter * getPainter() { return m_painter; } // gets a pointer to the painter
-
-  /**
-   * @brief Represents the native pixel format used by this display.
-   *
-   * @return Display native pixel format
-   */
-  virtual NativePixelFormat nativePixelFormat() = 0;
 
   PaintState & paintState() { return m_paintState; }
 
@@ -630,12 +628,11 @@ protected:
 
   Sprite * mouseCursor() { return &m_mouseCursor; }
 
+  Painter *              m_painter;
+
 private:
 
   void primitiveReplaceDynamicBuffers(Primitive & primitive);
-
-
-  Painter *              m_painter;
 
   PaintState             m_paintState;
 
@@ -695,9 +692,7 @@ private:
 
   static bool convertModelineToTimings(char const * modeline, VGATimings * timings);
 
-  virtual void suspendBackgroundPrimitiveExecution();
-
-  virtual void resumeBackgroundPrimitiveExecution();
+public:
 
   /**
    * @brief Sets current resolution using linux-like modeline.
@@ -726,9 +721,16 @@ private:
    *     VGAController.setResolution(VGA_640x382_60Hz, 640, 350);
    *
    */
-  void setResolution(char const * modeline, int viewPortWidth = -1, int viewPortHeight = -1, bool doubleBuffered = false);
+
+  virtual void setResolution(char const * modeline, int viewPortWidth = -1, int viewPortHeight = -1, bool doubleBuffered = false);
 
   virtual void setResolution(VGATimings const& timings, int viewPortWidth = -1, int viewPortHeight = -1, bool doubleBuffered = false);
+
+  volatile int m_primitiveProcessingSuspended;             // 0 = enabled, >0 suspended
+
+  volatile uint32_t m_frameCounter;
+
+private:
 
   /**
    * @brief Determines horizontal position of the viewport.
@@ -799,8 +801,7 @@ private:
    *
    * @param y Vertical scanline position (0 = top row)
    */
-  uint8_t * getScanline(int y)                    { ret
-#define VGA2_LinesCount 4
+  uint8_t * getScanline(int y)                    { return (uint8_t*) m_viewPort[y]; }
 
   bool setDMABuffersCount(int buffersCount);
 
@@ -822,7 +823,7 @@ private:
   void setDMABufferView(int index, int row, int scan, volatile uint8_t * * viewPort, bool onVisibleDMA);
   void setDMABufferView(int index, int row, int scan, bool isStartOfVertFrontPorch);
 
-  virtual void onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow) = 0;
+  virtual void onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow);
 
   void volatile * getDMABuffer(int index, int * length);
 
@@ -840,6 +841,8 @@ private:
 
   void calculateAvailableCyclesForDrawings();
 
+protected:
+
   // when double buffer is enabled the "drawing" view port is always m_viewPort, while the "visible" view port is always m_viewPortVisible
   // when double buffer is not enabled then m_viewPort = m_viewPortVisible
   volatile uint8_t * *   m_viewPort;
@@ -847,8 +850,6 @@ private:
 
   // true: double buffering is implemented in DMA
   bool                   m_doubleBufferOverDMA;
-
-  volatile int           m_primitiveProcessingSuspended;             // 0 = enabled, >0 suspended
 
   intr_handle_t          m_isr_handle;
 
@@ -905,14 +906,6 @@ private:
 
   int16_t                m_rawFrameHeight;
 
-  void end();
-
-  void suspendBackgroundPrimitiveExecution();
-
-  // import "modeline" version of setResolution
-  using VGABaseController::setResolution;
-
-  void setResolution(VGATimings const& timings, int viewPortWidth = -1, int viewPortHeight = -1, bool doubleBuffered = false);
 
   NativePixelFormat nativePixelFormat() { return m_nativePixelFormat; }
 
@@ -933,12 +926,7 @@ protected:
 
   void init();
 
-  void swapBuffers();
-
 private:
-
-  void checkViewPortSize();
-  void onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow);
 
   // configuration
   int                         m_columnsQuantum; // viewport width must be divisble by m_columnsQuantum
@@ -946,6 +934,8 @@ private:
   int                         m_viewPortRatioDiv;
   int                         m_viewPortRatioMul;
   intr_handler_t              m_isrHandler;
+
+};
 
 } // end of namespace
 

@@ -90,8 +90,6 @@ class VGA64Controller : public VideoController {
 
   void resumeBackgroundPrimitiveExecution();
 
-  NativePixelFormat nativePixelFormat() { return NativePixelFormat::SBGR2222; }
-
   // import "modeline" version of setResolution
   using VideoController::setResolution;
 

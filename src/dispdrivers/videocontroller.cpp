@@ -165,6 +165,7 @@ VideoController::VideoController(int linesCount, int columnsQuantum, NativePixel
     m_primDynMemPool(FABGLIB_PRIMITIVES_DYNBUFFERS_SIZE)
 {
   m_linesCount = linesCount;
+  m_frameCounter = 0;
   m_lines   = (volatile uint8_t**) heap_caps_malloc(sizeof(uint8_t*) * m_linesCount, MALLOC_CAP_32BIT | MALLOC_CAP_INTERNAL);
   m_palette = (RGB222*) heap_caps_malloc(sizeof(RGB222) * getPaletteSize(), MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
 }
@@ -1486,6 +1487,9 @@ void IRAM_ATTR VideoController::swapBuffers()
     tswap(m_DMABuffers, m_DMABuffersVisible);
     m_DMABuffersHead->qe.stqe_next = (lldesc_t*) &m_DMABuffersVisible[0];
   }
+
+  s_viewPort        = m_viewPort;
+  s_viewPortVisible = m_viewPortVisible;
 }
 
 
@@ -1566,8 +1570,6 @@ void VideoController::checkViewPortSize()
 
 void VideoController::setResolution(VGATimings const& timings, int viewPortWidth, int viewPortHeight, bool doubleBuffered)
 {
-  VGABaseController::setResolution(timings, viewPortWidth, viewPortHeight, doubleBuffered);
-
   s_viewPort        = m_viewPort;
   s_viewPortVisible = m_viewPortVisible;
 
@@ -1611,14 +1613,6 @@ void VideoController::onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartO
       buffer->eof = 1;
     }
   }
-}
-
-
-void VideoController::swapBuffers()
-{
-  VGABaseController::swapBuffers();
-  s_viewPort        = m_viewPort;
-  s_viewPortVisible = m_viewPortVisible;
 }
 
 } // end of namespace

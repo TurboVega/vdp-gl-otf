@@ -47,6 +47,7 @@ VGA64Controller::VGA64Controller()
   s_instance = this;
   m_painter = new Painter64();
   m_painter->postConstruct();
+  m_nativePixelFormat = NativePixelFormat::SBGR2222;
 }
 
 void VGA64Controller::init()
@@ -109,7 +110,7 @@ void IRAM_ATTR VGA64Controller::VSyncInterrupt(void * arg)
     auto VGACtrl = (VGA64Controller*)arg;
     int64_t startTime = VGACtrl->backgroundPrimitiveTimeoutEnabled() ? esp_timer_get_time() : 0;
     Rect updateRect = Rect(SHRT_MAX, SHRT_MAX, SHRT_MIN, SHRT_MIN);
-    VGACtrl->frameCounter++;
+    VGACtrl->m_frameCounter++;
     do {
       Primitive prim;
       if (VGACtrl->getPrimitiveISR(&prim) == false)

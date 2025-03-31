@@ -321,7 +321,7 @@ void Terminal::syncDisplayController()
 }
 
 
-bool Terminal::begin(BaseDisplayController * displayController, int maxColumns, int maxRows, Keyboard * keyboard)
+bool Terminal::begin(VideoController * displayController, int maxColumns, int maxRows, Keyboard * keyboard)
 {
   m_displayController = displayController;
 
