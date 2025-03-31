@@ -56,7 +56,7 @@ bits24: 0                          1...
 /* VGA8Controller definitions */
 VGA8Controller * VGA8Controller::s_instance = nullptr;
 VGA8Controller::VGA8Controller()
-  : VGAPalettedController(VGA8_LinesCount, VGA8_COLUMNSQUANTUM, NativePixelFormat::PALETTE8, 8, 3, ISRHandler, 256 * sizeof(uint16_t))
+  : VideoController(VGA8_LinesCount, VGA8_COLUMNSQUANTUM, NativePixelFormat::PALETTE8, 8, 3, ISRHandler, 256 * sizeof(uint16_t))
 {
   s_instance = this;
   m_painter = new Painter8();

@@ -39,7 +39,7 @@
 #include <stddef.h>
 
 #include "fabglconf.h"
-#include "displaycontroller.h"
+#include "dispdrivers/videocontroller.h"
 
 namespace fabgl {
 

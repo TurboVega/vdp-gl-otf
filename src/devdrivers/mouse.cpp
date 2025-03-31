@@ -28,7 +28,7 @@
 
 #include "mouse.h"
 #include "comdrivers/ps2controller.h"
-#include "displaycontroller.h"
+#include "dispdrivers/videocontroller.h"
 
 #pragma GCC optimize ("O2")
 
@@ -185,7 +185,7 @@ bool Mouse::getNextDelta(MouseDelta * delta, int timeOutMS, bool requestResendOn
 }
 
 
-void Mouse::setupAbsolutePositioner(int width, int height, bool createAbsolutePositionsQueue, BitmappedDisplayController * updateDisplayController)
+void Mouse::setupAbsolutePositioner(int width, int height, bool createAbsolutePositionsQueue, VideoController * updateDisplayController)
 {
   if (m_area != Size(width, height)) {
     m_area                  = Size(width, height);

@@ -1,4 +1,12 @@
 /*
+  videocontroller - Controls video output
+
+  Created by Curtis Whitley, MAR 2025
+
+  Parts copied from code based on the license reference below.
+*/
+
+/*
   Created by Fabrizio Di Vittorio (fdivitto2013@gmail.com) - <http://www.fabgl.com>
   Copyright (c) 2019-2022 Fabrizio Di Vittorio.
   All rights reserved.
@@ -29,7 +37,7 @@
 /**
  * @file
  *
- * @brief This file contains fabgl::BitmappedDisplayController definition.
+ * @brief This file contains fabgl::VideoController definition.
  */
 
 #include <functional>
@@ -340,34 +348,48 @@ struct Primitive {
   Primitive(PrimitiveCmd cmd_, Rect const & rect_) : cmd(cmd_), rect(rect_) { }
 } __attribute__ ((packed));
 
+#if FABGLIB_VGAXCONTROLLER_PERFORMANCE_CHECK
+  extern volatile uint64_t s_vgapalctrlcycles;
+#endif
 
 /** \ingroup Enumerations
- * @brief This enum defines types of display controllers
+ * @brief Represents one of the four blocks of horizontal or vertical line
  */
-enum class DisplayControllerType {
-  Textual,      /**< The display controller can represents text only */
-  Bitmapped,    /**< The display controller can represents text and bitmapped graphics */
+enum VGAScanStart {
+  FrontPorch,   /**< Horizontal line sequence is: FRONTPORCH -> SYNC -> BACKPORCH -> VISIBLEAREA */
+  Sync,         /**< Horizontal line sequence is: SYNC -> BACKPORCH -> VISIBLEAREA -> FRONTPORCH */
+  BackPorch,    /**< Horizontal line sequence is: BACKPORCH -> VISIBLEAREA -> FRONTPORCH -> SYNC */
+  VisibleArea   /**< Horizontal line sequence is: VISIBLEAREA -> FRONTPORCH -> SYNC -> BACKPORCH */
 };
-
-
+/** @brief Specifies the VGA timings. This is a modeline decoded. */
+struct VGATimings {
+  char          label[22];       /**< Resolution text description */
+  int           frequency;       /**< Pixel frequency (in Hz) */
+  int16_t       HVisibleArea;    /**< Horizontal visible area length in pixels */
+  int16_t       HFrontPorch;     /**< Horizontal Front Porch duration in pixels */
+  int16_t       HSyncPulse;      /**< Horizontal Sync Pulse duration in pixels */
+  int16_t       HBackPorch;      /**< Horizontal Back Porch duration in pixels */
+  int16_t       VVisibleArea;    /**< Vertical number of visible lines */
+  int16_t       VFrontPorch;     /**< Vertical Front Porch duration in lines */
+  int16_t       VSyncPulse;      /**< Vertical Sync Pulse duration in lines */
+  int16_t       VBackPorch;      /**< Vertical Back Porch duration in lines */
+  char          HSyncLogic;      /**< Horizontal Sync polarity '+' or '-' */
+  char          VSyncLogic;      /**< Vertical Sync polarity '+' or '-' */
+  uint8_t       scanCount;       /**< Scan count. 1 = single scan, 2 = double scan (allowing low resolutions like 320x240...) */
+  uint8_t       multiScanBlack;  /**< 0 = Additional rows are the repetition of the first. 1 = Additional rows are blank. */
+  VGAScanStart  HStartingBlock;  /**< Horizontal starting block. DetermineshHorizontal order of signals */
+};
 
 /**
  * @brief Represents the base abstract class for all display controllers
  */
-class BaseDisplayController {
+class VideoController {
 
 public:
 
   virtual void setResolution(char const * modeline, int viewPortWidth = -1, int viewPortHeight = -1, bool doubleBuffered = false) = 0;
 
   virtual void begin() = 0;
-
-  /**
-   * @brief Determines the display controller type
-   *
-   * @return Display controller type.
-   */
-  virtual DisplayControllerType controllerType() = 0;
 
   /**
    * @brief Determines the screen width in pixels.
@@ -410,19 +432,11 @@ protected:
 
   // contains H and V signals for visible line
   volatile uint8_t m_HVSync;
-};
-
-/**
- * @brief Represents the base abstract class for bitmapped display controllers
- */
-class BitmappedDisplayController : public BaseDisplayController {
 
 public:
 
-  BitmappedDisplayController();
-  virtual ~BitmappedDisplayController();
-
-  DisplayControllerType controllerType() { return DisplayControllerType::Bitmapped; }
+  VideoController();
+  virtual ~VideoController();
 
   Painter * getPainter() { return m_painter; } // gets a pointer to the painter
 
@@ -494,7 +508,7 @@ public:
    * A sprite is an image that keeps background unchanged.<br>
    * There is no limit to the number of active sprites, but flickering and slow
    * refresh happens when a lot of sprites (or large sprites) are visible.<br>
-   * To empty the list of active sprites call BitmappedDisplayController.removeSprites().
+   * To empty the list of active sprites call VideoController.removeSprites().
    *
    * @param sprites The list of sprites to make currently active.
    * @param count Number of sprites in the list.
@@ -529,14 +543,14 @@ public:
    * Screen is automatically updated whenever a primitive is painted (look at Canvas).<br>
    * When a sprite updates its image or its position (or any other property) it is required
    * to force a refresh using this method.<br>
-   * BitmappedDisplayController.refreshSprites() is required also when using the double buffered mode, to paint sprites.
+   * VideoController.refreshSprites() is required also when using the double buffered mode, to paint sprites.
    */
   void refreshSprites();
 
   /**
-   * @brief Determines whether BitmappedDisplayController is on double buffered mode.
+   * @brief Determines whether VideoController is on double buffered mode.
    *
-   * @return True if BitmappedDisplayController is on double buffered mode.
+   * @return True if VideoController is on double buffered mode.
    */
   bool isDoubleBuffered() { return m_doubleBuffered; }
 
@@ -644,9 +658,294 @@ private:
   // memory pool used to allocate buffers of primitives
   LightMemoryPool        m_primDynMemPool;
 
-};
+  /**
+   * @brief This is the 64 colors (8 GPIOs) initializer.
+   *
+   * Two GPIOs per channel, plus horizontal and vertical sync signals.
+   *
+   * @param red1GPIO GPIO to use for red channel, MSB bit.
+   * @param red0GPIO GPIO to use for red channel, LSB bit.
+   * @param green1GPIO GPIO to use for green channel, MSB bit.
+   * @param green0GPIO GPIO to use for green channel, LSB bit.
+   * @param blue1GPIO GPIO to use for blue channel, MSB bit.
+   * @param blue0GPIO GPIO to use for blue channel, LSB bit.
+   * @param HSyncGPIO GPIO to use for horizontal sync signal.
+   * @param VSyncGPIO GPIO to use for vertical sync signal.
+   *
+   * Example:
+   *
+   *     // Use GPIO 22-21 for red, GPIO 19-18 for green, GPIO 5-4 for blue, GPIO 23 for HSync and GPIO 15 for VSync
+   *     VGAController.begin(GPIO_NUM_22, GPIO_NUM_21, GPIO_NUM_19, GPIO_NUM_18, GPIO_NUM_5, GPIO_NUM_4, GPIO_NUM_23, GPIO_NUM_15);
+   */
+  void begin(gpio_num_t red1GPIO, gpio_num_t red0GPIO, gpio_num_t green1GPIO, gpio_num_t green0GPIO, gpio_num_t blue1GPIO, gpio_num_t blue0GPIO, gpio_num_t HSyncGPIO, gpio_num_t VSyncGPIO);
+
+  /**
+   * @brief This is the 64 colors (8 GPIOs) initializer using default pinout.
+   *
+   * Two GPIOs per channel, plus horizontal and vertical sync signals.
+   * Use GPIO 22-21 for red, GPIO 19-18 for green, GPIO 5-4 for blue, GPIO 23 for HSync and GPIO 15 for VSync
+   *
+   * Example:
+   *
+   *     VGAController.begin();
+   */
+  void begin();
+
+  virtual void end();
+
+  static bool convertModelineToTimings(char const * modeline, VGATimings * timings);
+
+  virtual void suspendBackgroundPrimitiveExecution();
+
+  virtual void resumeBackgroundPrimitiveExecution();
+
+  /**
+   * @brief Sets current resolution using linux-like modeline.
+   *
+   * Modeline must have following syntax (non case sensitive):
+   *
+   *     "label" clock_mhz hdisp hsyncstart hsyncend htotal vdisp vsyncstart vsyncend vtotal (+HSync | -HSync) (+VSync | -VSync) [DoubleScan | QuadScan] [FrontPorchBegins | SyncBegins | BackPorchBegins | VisibleBegins] [MultiScanBlank]
+   *
+   * In fabglconf.h there are macros with some predefined modelines for common resolutions.
+   * When MultiScanBlank and DoubleScan is specified then additional rows are not repeated, but just filled with blank lines.
+   *
+   * @param modeline Linux-like modeline as specified above.
+   * @param viewPortWidth Horizontal viewport size in pixels. If less than zero (-1) it is sized to modeline visible area width.
+   * @param viewPortHeight Vertical viewport size in pixels. If less then zero (-1) it is sized to maximum allocable.
+   * @param doubleBuffered if True allocates another viewport of the same size to use as back buffer. Make sure there is enough free memory.
+   *
+   * Example:
+   *
+   *     // Use predefined modeline for 640x480@60Hz
+   *     VGAController.setResolution(VGA_640x480_60Hz);
+   *
+   *     // The same of above using modeline string
+   *     VGAController.setResolution("\"640x480@60Hz\" 25.175 640 656 752 800 480 490 492 525 -HSync -VSync");
+   *
+   *     // Set 640x382@60Hz but limit the viewport to 640x350
+   *     VGAController.setResolution(VGA_640x382_60Hz, 640, 350);
+   *
+   */
+  void setResolution(char const * modeline, int viewPortWidth = -1, int viewPortHeight = -1, bool doubleBuffered = false);
+
+  virtual void setResolution(VGATimings const& timings, int viewPortWidth = -1, int viewPortHeight = -1, bool doubleBuffered = false);
+
+  /**
+   * @brief Determines horizontal position of the viewport.
+   *
+   * @return Horizontal position of the viewport (in case viewport width is less than screen width).
+   */
+  int getViewPortCol()                             { return m_viewPortCol; }
+
+  /**
+   * @brief Determines vertical position of the viewport.
+   *
+   * @return Vertical position of the viewport (in case viewport height is less than screen height).
+   */
+  int getViewPortRow()                             { return m_viewPortRow; }
+
+  /**
+   * @brief Moves screen by specified horizontal and vertical offset.
+   *
+   * Screen moving is performed moving horizontal and vertical Front and Back porchs.
+   *
+   * @param offsetX Horizontal offset in pixels. < 0 goes left, > 0 goes right.
+   * @param offsetY Vertical offset in pixels. < 0 goes up, > 0 goes down.
+   *
+   * Example:
+   *
+   *     // Move screen 4 pixels right, 1 pixel left
+   *     VGAController.moveScreen(4, -1);
+   */
+  void moveScreen(int offsetX, int offsetY);
+
+  /**
+   * @brief Reduces or expands screen size by the specified horizontal and vertical offset.
+   *
+   * Screen shrinking is performed changing horizontal and vertical Front and Back porchs.
+   *
+   * @param shrinkX Horizontal offset in pixels. > 0 shrinks, < 0 expands.
+   * @param shrinkY Vertical offset in pixels. > 0 shrinks, < 0 expands.
+   *
+   * Example:
+   *
+   *     // Shrink screen by 8 pixels and move by 8 pixels to the left
+   *     VGAController.shrinkScreen(8, 0);
+   *     VGAController.moveScreen(8, 0);
+   */
+  void shrinkScreen(int shrinkX, int shrinkY);
+
+  VGATimings * getResolutionTimings()             { return &m_timings; }
+
+  /**
+   * @brief Gets number of bits allocated for each channel.
+   *
+   * Number of bits depends by which begin() initializer has been called.
+   *
+   * @return 1 (8 colors) or 2 (64 colors).
+   */
+  uint8_t getBitsPerChannel()                     { return m_bitsPerChannel; }
+
+  /**
+   * @brief Gets a raw scanline pointer.
+   *
+   * A raw scanline must be filled with raw pixel colors.
+   * A raw pixel (or raw color) is a byte (uint8_t) that contains color information and synchronization signals.
+   * Pixels are arranged in 32 bit packes as follows:
+   *   pixel 0 = byte 2, pixel 1 = byte 3, pixel 2 = byte 0, pixel 3 = byte 1 :
+   *   pixel : 0  1  2  3  4  5  6  7  8  9 10 11 ...etc...
+   *   byte  : 2  3  0  1  6  7  4  5 10 11  8  9 ...etc...
+   *   dword : 0           1           2          ...etc...
+   *
+   * @param y Vertical scanline position (0 = top row)
+   */
+  uint8_t * getScanline(int y)                    { ret
+#define VGA2_LinesCount 4
+
+  bool setDMABuffersCount(int buffersCount);
+
+  uint8_t packHVSync(bool HSync, bool VSync);
+
+  uint8_t preparePixelWithSync(RGB222 rgb, bool HSync, bool VSync);
+
+  void fillVertBuffers(int offsetY);
+
+  void fillHorizBuffers(int offsetX);
+
+  int fill(uint8_t volatile * buffer, int startPos, int length, uint8_t red, uint8_t green, uint8_t blue, bool hsync, bool vsync);
+
+  int calcRequiredDMABuffersCount(int viewPortHeight);
+
+  bool isMultiScanBlackLine(int scan);
+
+  void setDMABufferBlank(int index, void volatile * address, int length, int scan, bool isStartOfVertFrontPorch);
+  void setDMABufferView(int index, int row, int scan, volatile uint8_t * * viewPort, bool onVisibleDMA);
+  void setDMABufferView(int index, int row, int scan, bool isStartOfVertFrontPorch);
+
+  virtual void onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow) = 0;
+
+  void volatile * getDMABuffer(int index, int * length);
+
+  void allocateViewPort(uint32_t allocCaps, int rowlen);
+  virtual void allocateViewPort();
+  virtual void checkViewPortSize() { };
+
+  virtual void swapBuffers();
+
+  // chance to overwrite a scan line in the output DMA buffer
+  virtual void decorateScanLinePixels(uint8_t * pixels, uint16_t scanRow);
+
+  // Processes primitives upon notification
+  static void primitiveExecTask(void * arg);
+
+  void calculateAvailableCyclesForDrawings();
+
+  // when double buffer is enabled the "drawing" view port is always m_viewPort, while the "visible" view port is always m_viewPortVisible
+  // when double buffer is not enabled then m_viewPort = m_viewPortVisible
+  volatile uint8_t * *   m_viewPort;
+  volatile uint8_t * *   m_viewPortVisible;
+
+  // true: double buffering is implemented in DMA
+  bool                   m_doubleBufferOverDMA;
+
+  volatile int           m_primitiveProcessingSuspended;             // 0 = enabled, >0 suspended
+
+  intr_handle_t          m_isr_handle;
+
+  VGATimings             m_timings;
+  int16_t                m_HLineSize;
+
+  volatile int16_t       m_viewPortCol;
+  volatile int16_t       m_viewPortRow;
+
+  volatile uint8_t * *        m_lines;
+
+  // optimization: clones of m_viewPort and m_viewPortVisible
+  static volatile uint8_t * * s_viewPort;
+  static volatile uint8_t * * s_viewPortVisible;
+
+  static lldesc_t volatile *  s_frameResetDesc;
+  static volatile int         s_scanLine;
+  static volatile int         s_scanWidth;
+  static volatile int         s_viewPortHeight;
+
+  int                         m_linesCount;     // viewport height must be divisible by m_linesCount
+
+  volatile bool               m_taskProcessingPrimitives;
+  TaskHandle_t                m_primitiveExecTask;
+
+  // Maximum time (in CPU cycles) available for primitives drawing
+  volatile uint32_t           m_primitiveExecTimeoutCycles;
+
+  // true = allowed time to process primitives is limited to the vertical blank. Slow, but avoid flickering
+  // false = allowed time is the half of an entire frame. Fast, but may flick
+  bool                        m_processPrimitivesOnBlank;
+
+private:
+  // bits per channel on VGA output
+  // 1 = 8 colors, 2 = 64 colors, set by begin()
+  int                    m_bitsPerChannel;
+
+  GPIOStream             m_GPIOStream;
+
+  lldesc_t volatile *    m_DMABuffers;
+  int                    m_DMABuffersCount;
+
+  // when double buffer is enabled at DMA level the running DMA buffer is always m_DMABuffersVisible
+  // when double buffer is not enabled then m_DMABuffers = m_DMABuffersVisible
+  lldesc_t volatile *    m_DMABuffersHead;
+  lldesc_t volatile *    m_DMABuffersVisible;
+
+  // These buffers contains a full line, with FrontPorch, Sync, BackPorch and blank visible area, in the
+  // order specified by timings.HStartingBlock
+  volatile uint8_t *     m_HBlankLine_withVSync;
+  volatile uint8_t *     m_HBlankLine;
+
+  uint8_t * *            m_viewPortMemoryPool;  // array ends with nullptr
+
+  int16_t                m_rawFrameHeight;
+
+  void end();
+
+  void suspendBackgroundPrimitiveExecution();
+
+  // import "modeline" version of setResolution
+  using VGABaseController::setResolution;
+
+  void setResolution(VGATimings const& timings, int viewPortWidth = -1, int viewPortHeight = -1, bool doubleBuffered = false);
+
+  NativePixelFormat nativePixelFormat() { return m_nativePixelFormat; }
+
+  /**
+   * @brief Determines the maximum time allowed to process primitives
+   *
+   * Primitives processing is always started at the beginning of vertical blank.
+   * Unfortunately this time is limited and not all primitive may be processed, so processing all primitives may required more frames.
+   * This method expands the allowed time to half of a frame. This increase drawing speed but may show some flickering.
+   *
+   * The default is False (fast drawings, possible flickering).
+   *
+   * @param value True = allowed time to process primitives is limited to the vertical blank. Slow, but avoid flickering. False = allowed time is the half of an entire frame. Fast, but may flick.
+   */
+  void setProcessPrimitivesOnBlank(bool value)          { m_processPrimitivesOnBlank = value; }
+
+protected:
+
+  void init();
+
+  void swapBuffers();
+
+private:
+
+  void checkViewPortSize();
+  void onSetupDMABuffer(lldesc_t volatile * buffer, bool isStartOfVertFrontPorch, int scan, bool isVisible, int visibleRow);
+
+  // configuration
+  int                         m_columnsQuantum; // viewport width must be divisble by m_columnsQuantum
+  NativePixelFormat           m_nativePixelFormat;
+  int                         m_viewPortRatioDiv;
+  int                         m_viewPortRatioMul;
+  intr_handler_t              m_isrHandler;
 
 } // end of namespace
-
-
 

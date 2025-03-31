@@ -38,7 +38,7 @@
 #include "fabglconf.h"
 #include "fabutils.h"
 #include "devdrivers/swgenerator.h"
-#include "dispdrivers/vgapalettedcontroller.h"
+#include "dispdrivers/videocontroller.h"
 
 #define VGA4_LinesCount 4
 
@@ -61,7 +61,7 @@ namespace fabgl {
 *     displayController.begin();
 *     displayController.setResolution(VGA_640x480_60Hz);
 */
-class VGA4Controller : public VGAPalettedController {
+class VGA4Controller : public VideoController {
 
 public:
 

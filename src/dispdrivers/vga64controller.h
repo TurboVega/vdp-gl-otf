@@ -38,7 +38,7 @@
 #include "fabglconf.h"
 #include "fabutils.h"
 #include "devdrivers/swgenerator.h"
-#include "dispdrivers/vgabasecontroller.h"
+#include "dispdrivers/videocontroller.h"
 
 namespace fabgl {
 
@@ -70,7 +70,7 @@ namespace fabgl {
 *     // Set 640x350@70Hz resolution
 *     VGA64Controller.setResolution(VGA_640x350_70Hz);
 */
-class VGA64Controller : public VGABaseController {
+class VGA64Controller : public VideoController {
 
   public:
 
@@ -86,17 +86,14 @@ class VGA64Controller : public VGABaseController {
    */
   static VGA64Controller * instance() { return s_instance; }
 
-  // abstract method of BitmappedDisplayController
   void suspendBackgroundPrimitiveExecution();
 
-  // abstract method of BitmappedDisplayController
   void resumeBackgroundPrimitiveExecution();
 
-  // abstract method of BitmappedDisplayController
   NativePixelFormat nativePixelFormat() { return NativePixelFormat::SBGR2222; }
 
   // import "modeline" version of setResolution
-  using VGABaseController::setResolution;
+  using VideoController::setResolution;
 
   void setResolution(VGATimings const& timings, int viewPortWidth = -1, int viewPortHeight = -1, bool doubleBuffered = false);
 

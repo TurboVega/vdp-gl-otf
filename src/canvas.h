@@ -37,7 +37,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "displaycontroller.h"
+#include "dispdrivers/videocontroller.h"
 
 namespace fabgl {
 
@@ -67,7 +67,7 @@ class Canvas {
 
 public:
 
-  Canvas(BitmappedDisplayController * displayController);
+  Canvas(VideoController * displayController);
 
   /**
    * @brief Determines the canvas width in pixels.
@@ -871,7 +871,7 @@ public:
 
 private:
 
-  BitmappedDisplayController * m_displayController;
+  VideoController * m_displayController;
 
   FontInfo const *    m_fontInfo;
   uint8_t             m_textHorizRate; // specify character size: 1 = m_fontInfo.width, 2 = m_fontInfo.width * 2, etc...

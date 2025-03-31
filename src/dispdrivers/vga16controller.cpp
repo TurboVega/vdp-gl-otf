@@ -49,7 +49,7 @@ namespace fabgl {
 VGA16Controller * VGA16Controller::s_instance = nullptr;
 
 VGA16Controller::VGA16Controller()
-  : VGAPalettedController(VGA16_LinesCount, VGA16_COLUMNSQUANTUM, NativePixelFormat::PALETTE16, 2, 1, ISRHandler, 256 * sizeof(uint16_t))
+  : VideoController(VGA16_LinesCount, VGA16_COLUMNSQUANTUM, NativePixelFormat::PALETTE16, 2, 1, ISRHandler, 256 * sizeof(uint16_t))
 {
   s_instance = this;
   m_painter = new Painter16();

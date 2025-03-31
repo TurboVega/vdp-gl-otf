@@ -51,14 +51,14 @@ VGA64Controller::VGA64Controller()
 
 void VGA64Controller::init()
 {
-  VGABaseController::init();
+  VideoController::init();
 
   m_doubleBufferOverDMA = true;
 }
 
 void VGA64Controller::suspendBackgroundPrimitiveExecution()
 {
-  VGABaseController::suspendBackgroundPrimitiveExecution();
+  VideoController::suspendBackgroundPrimitiveExecution();
   if (m_primitiveProcessingSuspended == 1) {
     I2S1.int_clr.val     = 0xFFFFFFFF;
     I2S1.int_ena.out_eof = 0;
@@ -67,7 +67,7 @@ void VGA64Controller::suspendBackgroundPrimitiveExecution()
 
 void VGA64Controller::resumeBackgroundPrimitiveExecution()
 {
-  VGABaseController::resumeBackgroundPrimitiveExecution();
+  VideoController::resumeBackgroundPrimitiveExecution();
   if (m_primitiveProcessingSuspended == 0) {
     if (m_isr_handle == nullptr)
       esp_intr_alloc(ETS_I2S1_INTR_SOURCE, ESP_INTR_FLAG_LEVEL1, VSyncInterrupt, this, &m_isr_handle);
@@ -78,12 +78,12 @@ void VGA64Controller::resumeBackgroundPrimitiveExecution()
 
 void VGA64Controller::allocateViewPort()
 {
-  VGABaseController::allocateViewPort(MALLOC_CAP_DMA, getPainter()->getViewPortWidth);
+  VideoController::allocateViewPort(MALLOC_CAP_DMA, getPainter()->getViewPortWidth);
 }
 
 void VGA64Controller::setResolution(VGATimings const& timings, int viewPortWidth, int viewPortHeight, bool doubleBuffered)
 {
-  VGABaseController::setResolution(timings, viewPortWidth, viewPortHeight, doubleBuffered);
+  VideoController::setResolution(timings, viewPortWidth, viewPortHeight, doubleBuffered);
 
   // fill view port
   for (int i = 0; i < m_viewPortHeight; ++i)

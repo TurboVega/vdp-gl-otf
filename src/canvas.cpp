@@ -39,7 +39,7 @@ namespace fabgl {
 #define INVALIDRECT Rect(-32768, -32768, -32768, -32768)
 
 
-Canvas::Canvas(BitmappedDisplayController * displayController)
+Canvas::Canvas(VideoController * displayController)
   : m_displayController(displayController),
     m_fontInfo(nullptr),
     m_textHorizRate(1),
@@ -93,7 +93,7 @@ void Canvas::waitCompletion(bool waitVSync)
 
 
 // Warning: beginUpdate() disables vertical sync interrupts. This means that
-// the BitmappedDisplayController primitives queue is not processed, and adding primitives may
+// the VideoController primitives queue is not processed, and adding primitives may
 // cause a deadlock. To avoid this a call to "Canvas.waitCompletion(false)"
 // should be performed very often.
 void Canvas::beginUpdate()

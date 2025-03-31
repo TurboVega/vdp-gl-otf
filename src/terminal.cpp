@@ -324,7 +324,6 @@ void Terminal::syncDisplayController()
 bool Terminal::begin(BaseDisplayController * displayController, int maxColumns, int maxRows, Keyboard * keyboard)
 {
   m_displayController = displayController;
-  m_bitmappedDisplayController = (m_displayController->controllerType() == DisplayControllerType::Bitmapped);
 
   m_endingState = false;
   
