@@ -26,15 +26,11 @@
 
 #pragma once
 
-
-
 /**
  * @file
  *
  * @brief This file contains fabgl::BitmappedDisplayController definition.
  */
-
-
 
 #include <functional>
 #include <vector>
@@ -52,12 +48,9 @@
 #include "fabglconf.h"
 #include "fabutils.h"
 
-#include "dispdrivers/paintdefs.h"
-
+#include "dispdrivers/painter.h"
 
 namespace fabgl {
-
-
 
 /*
   Notes:
@@ -431,6 +424,8 @@ public:
 
   DisplayControllerType controllerType() { return DisplayControllerType::Bitmapped; }
 
+  Painter * getPainter() { return m_painter; } // gets a pointer to the painter
+
   /**
    * @brief Represents the native pixel format used by this display.
    *
@@ -589,28 +584,6 @@ protected:
 
   void execPrimitive(Primitive const & prim, Rect & updateRect, bool insideISR);
 
-  void updateAbsoluteClippingRect();
-
-  RGB888 getActualPenColor();
-
-  RGB888 getActualBrushColor();
-
-  void lineTo(Point const & position, Rect & updateRect);
-
-  void drawRect(Rect const & rect, Rect & updateRect);
-
-  void drawPath(Path const & path, Rect & updateRect);
-
-  void absDrawThickLine(int X1, int Y1, int X2, int Y2, int penWidth, RGB888 const & color);
-
-  void fillRect(Rect const & rect, RGB888 const & color, Rect & updateRect);
-
-  void fillEllipse(int centerX, int centerY, Size const & size, RGB888 const & color, Rect & updateRect);
-
-  void fillPath(Path const & path, RGB888 const & color, Rect & updateRect);
-
-  void renderGlyphsBuffer(GlyphsBufferRenderInfo const & glyphsBufferRenderInfo, Rect & updateRect);
-
   void setSprites(Sprite * sprites, int count, int spriteSize);
 
   Sprite * getSprite(int index);
@@ -643,12 +616,12 @@ protected:
 
   Sprite * mouseCursor() { return &m_mouseCursor; }
 
-  void resetPaintState();
-
 private:
 
   void primitiveReplaceDynamicBuffers(Primitive & primitive);
 
+
+  Painter *              m_painter;
 
   PaintState             m_paintState;
 
@@ -672,19 +645,6 @@ private:
   LightMemoryPool        m_primDynMemPool;
 
 };
-
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// GenericBitmappedDisplayController
-
-
-class GenericBitmappedDisplayController : public BitmappedDisplayController {
-
-protected:
-};
-
 
 } // end of namespace
 

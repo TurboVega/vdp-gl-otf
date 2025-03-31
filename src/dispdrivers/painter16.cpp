@@ -52,32 +52,32 @@ static inline __attribute__((always_inline)) int VGA16_GETPIXELINROW(uint8_t * r
 #define VGA16_INVERTPIXELINROW(row, x)       (row)[(x) >> 1] ^= (0xf0 >> (((x) & 1) << 2))
 
 static inline __attribute__((always_inline)) void VGA16_SETPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) Painter16::sgetScanline(y);
+  auto row = (uint8_t*) sgetScanline(y);
   int brow = x >> 1;
   row[brow] = (x & 1) ? ((row[brow] & 0xf0) | value) : ((row[brow] & 0x0f) | (value << 4));
 }
 
 static inline __attribute__((always_inline)) void VGA16_ORPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) Painter16::sgetScanline(y);
+  auto row = (uint8_t*) sgetScanline(y);
   int brow = x >> 1;
   row[brow] |= (x & 1) ? value : (value << 4);
 }
 
 static inline __attribute__((always_inline)) void VGA16_ANDPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) Painter16::sgetScanline(y);
+  auto row = (uint8_t*) sgetScanline(y);
   int brow = x >> 1;
   row[brow] &= (x & 1) ? (value | 0xF0) : ((value << 4) | 0x0F);
 }
 
 static inline __attribute__((always_inline)) void VGA16_XORPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) Painter16::sgetScanline(y);
+  auto row = (uint8_t*) sgetScanline(y);
   int brow = x >> 1;
   row[brow] ^= (x & 1) ? value : (value << 4);
 }
 
-#define VGA16_GETPIXEL(x, y)                 VGA16_GETPIXELINROW((uint8_t*)Painter16::m_viewPort[(y)], (x))
+#define VGA16_GETPIXEL(x, y)                 VGA16_GETPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
 
-#define VGA16_INVERT_PIXEL(x, y)             VGA16_INVERTPIXELINROW((uint8_t*)Painter16::m_viewPort[(y)], (x))
+#define VGA16_INVERT_PIXEL(x, y)             VGA16_INVERTPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
 
 #define VGA16_COLUMNSQUANTUM 16
 
@@ -87,11 +87,9 @@ static inline __attribute__((always_inline)) void VGA16_XORPIXEL(int x, int y, i
 Painter16 * Painter16::s_instance = nullptr;
 
 Painter16::Painter16() {
-  postConstruct();
 }
 
 Painter16::~Painter16() {
-  Painter::~Painter();
 }
 
 std::function<uint8_t(RGB888 const &)> Painter16::getPixelLambda(PaintMode mode) {

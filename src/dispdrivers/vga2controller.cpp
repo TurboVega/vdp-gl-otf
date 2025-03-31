@@ -54,14 +54,14 @@ static inline __attribute__((always_inline)) int VGA2_GETPIXELINROW(uint8_t * ro
 #define VGA2_INVERTPIXELINROW(row, x)       (row)[(x) >> 3] ^= (0x80 >> ((x) & 7))
 
 static inline __attribute__((always_inline)) void VGA2_SETPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) VGA2Controller::sgetScanline(y);
+  auto row = (uint8_t*) sgetScanline(y);
   int brow = x >> 3;
   row[brow] ^= (-value ^ row[brow]) & (0x80 >> (x & 7));
 }
 
-#define VGA2_GETPIXEL(x, y)                 VGA2_GETPIXELINROW((uint8_t*)VGA2Controller::m_viewPort[(y)], (x))
+#define VGA2_GETPIXEL(x, y)                 VGA2_GETPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
 
-#define VGA2_INVERT_PIXEL(x, y)             VGA2_INVERTPIXELINROW((uint8_t*)VGA2Controller::m_viewPort[(y)], (x))
+#define VGA2_INVERT_PIXEL(x, y)             VGA2_INVERTPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
 #define VGA2_COLUMNSQUANTUM 16
 
 /*************************************************************************************/
@@ -73,7 +73,7 @@ VGA2Controller::VGA2Controller()
 {
   s_instance = this;
   m_painter = new Painter2();
-  postConstruct();
+  m_painter->postConstruct();
 }
 
 VGA2Controller::~VGA2Controller()
@@ -111,8 +111,8 @@ void IRAM_ATTR VGA2Controller::ISRHandler(void * arg)
       s_scanLine = 0;
     }
 
-    auto const width  = ctrl->m_viewPortWidth;
-    auto const height = ctrl->m_viewPortHeight;
+    auto const width  = ctrl->getViewPortWidth();
+    auto const height = ctrl->getViewPortHeight();
     int scanLine = (s_scanLine + VGA2_LinesCount / 2) % height;
     if (scanLine == 0) {
       ctrl->m_currentSignalItem = ctrl->m_signalList;

@@ -50,14 +50,14 @@ static inline __attribute__((always_inline)) int VGA2_GETPIXELINROW(uint8_t * ro
 #define VGA2_INVERTPIXELINROW(row, x)       (row)[(x) >> 3] ^= (0x80 >> ((x) & 7))
 
 static inline __attribute__((always_inline)) void VGA2_SETPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) Painter2::sgetScanline(y);
+  auto row = (uint8_t*) sgetScanline(y);
   int brow = x >> 3;
   row[brow] ^= (-value ^ row[brow]) & (0x80 >> (x & 7));
 }
 
-#define VGA2_GETPIXEL(x, y)                 VGA2_GETPIXELINROW((uint8_t*)Painter2::m_viewPort[(y)], (x))
+#define VGA2_GETPIXEL(x, y)                 VGA2_GETPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
 
-#define VGA2_INVERT_PIXEL(x, y)             VGA2_INVERTPIXELINROW((uint8_t*)Painter2::m_viewPort[(y)], (x))
+#define VGA2_INVERT_PIXEL(x, y)             VGA2_INVERTPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
 
 #define VGA2_COLUMNSQUANTUM 16
 
@@ -66,11 +66,9 @@ static inline __attribute__((always_inline)) void VGA2_SETPIXEL(int x, int y, in
 
 
 Painter2::Painter2() {
-  postConstruct();
 }
 
 Painter2::~Painter2() {
-  Painter::~Painter();
 }
 
 std::function<uint8_t(RGB888 const &)> Painter2::getPixelLambda(PaintMode mode) {

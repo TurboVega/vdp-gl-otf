@@ -60,7 +60,7 @@ VGA8Controller::VGA8Controller()
 {
   s_instance = this;
   m_painter = new Painter8();
-  postConstruct();
+  m_painter->postConstruct();
 }
 
 VGA8Controller::~VGA8Controller()
@@ -95,8 +95,8 @@ void IRAM_ATTR VGA8Controller::ISRHandler(void * arg)
       s_scanLine = 0;
     }
 
-    auto const width  = ctrl->m_viewPortWidth;
-    auto const height = ctrl->m_viewPortHeight;
+    auto const width  = ctrl->getViewPortWidth();
+    auto const height = ctrl->getViewPortHeight();
     int scanLine = (s_scanLine + VGA8_LinesCount / 2) % height;
     if (scanLine == 0) {
       ctrl->m_currentSignalItem = ctrl->m_signalList;

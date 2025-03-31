@@ -61,21 +61,21 @@ static inline __attribute__((always_inline)) int VGA8_GETPIXELINROW(uint8_t * ro
 #define VGA8_INVERTPIXELINROW(row, x)       *((uint32_t*)(row + ((x) >> 3) * 3)) ^= 7 << (21 - ((x) & 7) * 3)
 
 static inline __attribute__((always_inline)) void VGA8_SETPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) Painter8::sgetScanline(y);
+  auto row = (uint8_t*) sgetScanline(y);
   uint32_t * bits24 = (uint32_t*)(row + (x >> 3) * 3);  // x / 8 * 3
   int shift = 21 - (x & 7) * 3;
   *bits24 ^= ((value << shift) ^ *bits24) & (7 << shift);
 }
 
 static inline __attribute__((always_inline)) void VGA8_ORPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) Painter8::sgetScanline(y);
+  auto row = (uint8_t*) sgetScanline(y);
   uint32_t * bits24 = (uint32_t*)(row + (x >> 3) * 3);  // x / 8 * 3
   int shift = 21 - (x & 7) * 3;
   *bits24 |= (value << shift);
 }
 
 static inline __attribute__((always_inline)) void VGA8_ANDPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) Painter8::sgetScanline(y);
+  auto row = (uint8_t*) sgetScanline(y);
   uint32_t * bits24 = (uint32_t*)(row + (x >> 3) * 3);  // x / 8 * 3
   int shift = 21 - (x & 7) * 3;
   value = (~0x00) ^ (7 << shift) | (value << shift);
@@ -83,15 +83,15 @@ static inline __attribute__((always_inline)) void VGA8_ANDPIXEL(int x, int y, in
 }
 
 static inline __attribute__((always_inline)) void VGA8_XORPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) Painter8::sgetScanline(y);
+  auto row = (uint8_t*) sgetScanline(y);
   uint32_t * bits24 = (uint32_t*)(row + (x >> 3) * 3);  // x / 8 * 3
   int shift = 21 - (x & 7) * 3;
   *bits24 ^= (value << shift);
 }
 
-#define VGA8_GETPIXEL(x, y)                 VGA8_GETPIXELINROW((uint8_t*)Painter8::m_viewPort[(y)], (x))
+#define VGA8_GETPIXEL(x, y)                 VGA8_GETPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
 
-#define VGA8_INVERT_PIXEL(x, y)             VGA8_INVERTPIXELINROW((uint8_t*)Painter8::m_viewPort[(y)], (x))
+#define VGA8_INVERT_PIXEL(x, y)             VGA8_INVERTPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
 
 #define VGA8_COLUMNSQUANTUM 16
 
@@ -99,11 +99,9 @@ static inline __attribute__((always_inline)) void VGA8_XORPIXEL(int x, int y, in
 /* Painter8 definitions */
 
 Painter8::Painter8() {
-  postConstruct();
 }
 
 Painter8::~Painter8() {
-  Painter::~Painter();
 }
 
 std::function<uint8_t(RGB888 const &)> Painter8::getPixelLambda(PaintMode mode) {

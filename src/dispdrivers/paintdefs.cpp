@@ -33,6 +33,8 @@
 
 #include "paintdefs.h"
 #include <math.h>
+#include "esp_heap_caps.h"
+#include <string.h>
 
 namespace fabgl {
 
@@ -54,6 +56,26 @@ RGB222::RGB222(RGB888 const & value)
     B = value.B >> 6;
   }
 }
+
+// Array to convert Color enum to RGB888 struct
+const RGB888 COLOR2RGB888[16] = {
+  {   0,   0,   0 }, // Black
+  { 128,   0,   0 }, // Red
+  {   0, 128,   0 }, // Green
+  { 128, 128,   0 }, // Yellow
+  {   0,   0, 128 }, // Blue
+  { 128,   0, 128 }, // Magenta
+  {   0, 128, 128 }, // Cyan
+  { 128, 128, 128 }, // White
+  {  64,  64,  64 }, // BrightBlack
+  { 255,   0,   0 }, // BrightRed
+  {   0, 255,   0 }, // BrightGreen
+  { 255, 255,   0 }, // BrightYellow
+  {   0,   0, 255 }, // BrightBlue
+  { 255,   0, 255 }, // BrightMagenta
+  {   0, 255, 255 }, // BrightCyan
+  { 255, 255, 255 }, // BrightWhite
+};
 
 RGB888::RGB888(Color color)
 {
@@ -377,6 +399,75 @@ Bitmap::~Bitmap()
 {
   if (dataAllocated)
     heap_caps_free((void*)data);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+// Sutherland-Cohen line clipping algorithm
+
+static int clipLine_code(int x, int y, Rect const & clipRect)
+{
+  int code = 0;
+  if (x < clipRect.X1)
+    code = 1;
+  else if (x > clipRect.X2)
+    code = 2;
+  if (y < clipRect.Y1)
+    code |= 4;
+  else if (y > clipRect.Y2)
+    code |= 8;
+  return code;
+}
+
+// false = line is out of clipping rect
+// true = line intersects or is inside the clipping rect (x1, y1, x2, y2 are changed if checkOnly=false)
+bool clipLine(int & x1, int & y1, int & x2, int & y2, Rect const & clipRect, bool checkOnly)
+{
+  int newX1 = x1;
+  int newY1 = y1;
+  int newX2 = x2;
+  int newY2 = y2;
+  int topLeftCode     = clipLine_code(newX1, newY1, clipRect);
+  int bottomRightCode = clipLine_code(newX2, newY2, clipRect);
+  while (true) {
+    if ((topLeftCode == 0) && (bottomRightCode == 0)) {
+      if (!checkOnly) {
+        x1 = newX1;
+        y1 = newY1;
+        x2 = newX2;
+        y2 = newY2;
+      }
+      return true;
+    } else if (topLeftCode & bottomRightCode) {
+      break;
+    } else {
+      int x = 0, y = 0;
+      int ncode = topLeftCode != 0 ? topLeftCode : bottomRightCode;
+      if (ncode & 8) {
+        x = newX1 + (newX2 - newX1) * (clipRect.Y2 - newY1) / (newY2 - newY1);
+        y = clipRect.Y2;
+      } else if (ncode & 4) {
+        x = newX1 + (newX2 - newX1) * (clipRect.Y1 - newY1) / (newY2 - newY1);
+        y = clipRect.Y1;
+      } else if (ncode & 2) {
+        y = newY1 + (newY2 - newY1) * (clipRect.X2 - newX1) / (newX2 - newX1);
+        x = clipRect.X2;
+      } else if (ncode & 1) {
+        y = newY1 + (newY2 - newY1) * (clipRect.X1 - newX1) / (newX2 - newX1);
+        x = clipRect.X1;
+      }
+      if (ncode == topLeftCode) {
+        newX1 = x;
+        newY1 = y;
+        topLeftCode = clipLine_code(newX1, newY1, clipRect);
+      } else {
+        newX2 = x;
+        newY2 = y;
+        bottomRightCode = clipLine_code(newX2, newY2, clipRect);
+      }
+    }
+  }
+  return false;
 }
 
 

@@ -50,8 +50,12 @@ class Painter {
   Painter();
   ~Painter();
 
+  void postConstruct(); // call this after child class construction stuff
+
   void setViewPort(uint8_t** rows, uint32_t width, uint32_t height);
-  
+
+  void resetPaintState();
+
   virtual void readScreen(Rect const & rect, RGB222 * destBuf) = 0;
 
   virtual void readScreen(Rect const & rect, RGB888 * destBuf) = 0;
@@ -118,7 +122,31 @@ class Painter {
 
   virtual void absDrawLine(int X1, int Y1, int X2, int Y2, RGB888 color) = 0;
 
+  void updateAbsoluteClippingRect();
+
+  RGB888 getActualPenColor();
+
+  RGB888 getActualBrushColor();
+
+  void lineTo(Point const & position, Rect & updateRect);
+
+  void drawRect(Rect const & rect, Rect & updateRect);
+
+  void drawPath(Path const & path, Rect & updateRect);
+
+  void absDrawThickLine(int X1, int Y1, int X2, int Y2, int penWidth, RGB888 const & color);
+
+  void fillRect(Rect const & rect, RGB888 const & color, Rect & updateRect);
+
+  void fillEllipse(int centerX, int centerY, Size const & size, RGB888 const & color, Rect & updateRect);
+
+  void fillPath(Path const & path, RGB888 const & color, Rect & updateRect);
+
+  void renderGlyphsBuffer(GlyphsBufferRenderInfo const & glyphsBufferRenderInfo, Rect & updateRect);
+
   protected:
+
+  uint8_t inline __attribute__((always_inline)) preparePixel(RGB222 rgb) { return (rgb.B << VGA_BLUE_BIT) | (rgb.G << VGA_GREEN_BIT) | (rgb.R << VGA_RED_BIT); }
 
   template <typename TPreparePixel, typename TRawSetPixel>
   void genericSetPixelAt(PixelDesc const & pixelDesc, Rect & updateRect, TPreparePixel preparePixel, TRawSetPixel rawSetPixel)
@@ -1565,21 +1593,15 @@ class Painter {
 
   virtual int getPaletteSize() = 0;
 
-  void updateAbsoluteClippingRect();
-
-  RGB888 getActualPenColor();
-
-  RGB888 getActualBrushColor();
-
   void * getSignalsForScanline(int scanline);
 
   // returns "static" version of m_viewPort
   uint8_t * sgetScanline(int y)                  { return (uint8_t*) m_viewPort[y]; }
 
+  public:
+
   // Should be called after the palette is updated.
   void updateRGB2PaletteLUT();
-
-  public:
 
   /**
    * @brief Creates a new palette (signal block) with a 16-bit ID, copying the default palette
@@ -1628,6 +1650,9 @@ class Painter {
    * @param entries Number of entries in the list
    */
   void updateSignalList(uint16_t * rawList, int entries);
+
+  inline int32_t getViewPortWidth() { return m_viewPortWidth; } 
+  inline int32_t getViewPortHeight() { return m_viewPortHeight; } 
 
   protected:
 

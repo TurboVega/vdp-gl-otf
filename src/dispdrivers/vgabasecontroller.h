@@ -37,7 +37,7 @@
 #include "fabglconf.h"
 #include "fabutils.h"
 #include "devdrivers/swgenerator.h"
-#include "painter.h"
+#include "displaycontroller.h"
 
 
 namespace fabgl {
@@ -73,7 +73,7 @@ struct VGATimings {
   uint8_t       multiScanBlack;  /**< 0 = Additional rows are the repetition of the first. 1 = Additional rows are blank. */
   VGAScanStart  HStartingBlock;  /**< Horizontal starting block. DetermineshHorizontal order of signals */
 };
-class VGABaseController : public GenericBitmappedDisplayController {
+class VGABaseController : public BitmappedDisplayController {
 
 public:
 
@@ -84,8 +84,6 @@ public:
   // unwanted methods
   VGABaseController(VGABaseController const&) = delete;
   void operator=(VGABaseController const&)    = delete;
-
-  Painter * getPainter() { return m_painter; } // gets a pointer to the painter
 
   /**
    * @brief This is the 64 colors (8 GPIOs) initializer.
@@ -220,7 +218,7 @@ public:
   /**
    * @brief Gets a raw scanline pointer.
    *
-   * A raw scanline must be filled with raw pixel colors. Use VGAController.createRawPixel to create raw pixel colors.
+   * A raw scanline must be filled with raw pixel colors.
    * A raw pixel (or raw color) is a byte (uint8_t) that contains color information and synchronization signals.
    * Pixels are arranged in 32 bit packes as follows:
    *   pixel 0 = byte 2, pixel 1 = byte 3, pixel 2 = byte 0, pixel 3 = byte 1 :
@@ -231,22 +229,6 @@ public:
    * @param y Vertical scanline position (0 = top row)
    */
   uint8_t * getScanline(int y)                    { return (uint8_t*) m_viewPort[y]; }
-
-  /**
-   * @brief Creates a raw pixel to use with VGAController.setRawPixel
-   *
-   * A raw pixel (or raw color) is a byte (uint8_t) that contains color information and synchronization signals.
-   *
-   * @param rgb Pixel RGB222 color
-   *
-   * Example:
-   *
-   *     // Set color of pixel at 100, 100
-   *     VGAController.setRawPixel(100, 100, VGAController.createRawPixel(RGB222(3, 0, 0));
-   */
-  uint8_t createRawPixel(RGB222 rgb)             { return preparePixel(rgb); }
-
-  uint8_t createBlankRawPixel()                  { return m_HVSync; }
 
   uint     frameCounter = 0;
 
@@ -265,8 +247,6 @@ protected:
   bool setDMABuffersCount(int buffersCount);
 
   uint8_t packHVSync(bool HSync, bool VSync);
-
-  uint8_t inline __attribute__((always_inline)) preparePixel(RGB222 rgb) { return m_HVSync | (rgb.B << VGA_BLUE_BIT) | (rgb.G << VGA_GREEN_BIT) | (rgb.R << VGA_RED_BIT); }
 
   uint8_t preparePixelWithSync(RGB222 rgb, bool HSync, bool VSync);
 
@@ -343,8 +323,6 @@ protected:
   // true = allowed time to process primitives is limited to the vertical blank. Slow, but avoid flickering
   // false = allowed time is the half of an entire frame. Fast, but may flick
   bool                        m_processPrimitivesOnBlank;
-
-  Painter *                   m_painter;
 
 private:
   // bits per channel on VGA output

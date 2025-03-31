@@ -52,21 +52,21 @@ static inline __attribute__((always_inline)) int VGA4_GETPIXELINROW(uint8_t * ro
 #define VGA4_INVERTPIXELINROW(row, x)       (row)[(x) >> 2] ^= 3 << (6 - ((x) & 3) * 2)
 
 static inline __attribute__((always_inline)) void VGA4_SETPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) Painter4::sgetScanline(y);
+  auto row = (uint8_t*) sgetScanline(y);
   int brow = x >> 2;
   int shift = 6 - (x & 3) * 2;
   row[brow] ^= ((value << shift) ^ row[brow]) & (3 << shift);
 }
 
 static inline __attribute__((always_inline)) void VGA4_ORPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) Painter4::sgetScanline(y);
+  auto row = (uint8_t*) sgetScanline(y);
   int brow = x >> 2;
   int shift = 6 - (x & 3) * 2;
   row[brow] |= (value << shift);
 }
 
 static inline __attribute__((always_inline)) void VGA4_ANDPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) Painter4::sgetScanline(y);
+  auto row = (uint8_t*) sgetScanline(y);
   int brow = x >> 2;
   int shift = 6 - (x & 3) * 2;
   // byte to write needs to have 1s in non-masked bits
@@ -75,15 +75,15 @@ static inline __attribute__((always_inline)) void VGA4_ANDPIXEL(int x, int y, in
 }
 
 static inline __attribute__((always_inline)) void VGA4_XORPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) Painter4::sgetScanline(y);
+  auto row = (uint8_t*) sgetScanline(y);
   int brow = x >> 2;
   int shift = 6 - (x & 3) * 2;
   row[brow] ^= (value << shift);
 }
 
-#define VGA4_GETPIXEL(x, y)                 VGA4_GETPIXELINROW((uint8_t*)Painter4::m_viewPort[(y)], (x))
+#define VGA4_GETPIXEL(x, y)                 VGA4_GETPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
 
-#define VGA4_INVERT_PIXEL(x, y)             VGA4_INVERTPIXELINROW((uint8_t*)Painter4::m_viewPort[(y)], (x))
+#define VGA4_INVERT_PIXEL(x, y)             VGA4_INVERTPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
 
 #define VGA4_COLUMNSQUANTUM 16
 
@@ -91,11 +91,9 @@ static inline __attribute__((always_inline)) void VGA4_XORPIXEL(int x, int y, in
 /* Painter4 definitions */
 
 Painter4::Painter4() {
-  postConstruct();
 }
 
 Painter4::~Painter4() {
-  Painter::~Painter();
 }
 
 std::function<uint8_t(RGB888 const &)> Painter4::getPixelLambda(PaintMode mode) {

@@ -46,7 +46,7 @@ VGA64Controller::VGA64Controller()
 {
   s_instance = this;
   m_painter = new Painter64();
-  postConstruct();
+  m_painter->postConstruct();
 }
 
 void VGA64Controller::init()
@@ -78,7 +78,7 @@ void VGA64Controller::resumeBackgroundPrimitiveExecution()
 
 void VGA64Controller::allocateViewPort()
 {
-  VGABaseController::allocateViewPort(MALLOC_CAP_DMA, m_viewPortWidth);
+  VGABaseController::allocateViewPort(MALLOC_CAP_DMA, getPainter()->getViewPortWidth);
 }
 
 void VGA64Controller::setResolution(VGATimings const& timings, int viewPortWidth, int viewPortHeight, bool doubleBuffered)

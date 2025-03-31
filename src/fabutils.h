@@ -826,10 +826,6 @@ private:
 ///////////////////////////////////////////////////////////////////////////////////
 
 
-
-bool clipLine(int & x1, int & y1, int & x2, int & y2, Rect const & clipRect, bool checkOnly);
-
-
 void removeRectangle(Stack<Rect> & rects, Rect const & mainRect, Rect const & rectToRemove);
 
 

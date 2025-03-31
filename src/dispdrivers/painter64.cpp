@@ -35,11 +35,9 @@ namespace fabgl {
 /* Painter64 definitions */
 
 Painter64::Painter64() {
-  postConstruct();
 }
 
 Painter64::~Painter64() {
-  Painter::~Painter();
 }
 
 std::function<uint8_t(RGB888 const &)> Painter64::getPixelLambda(PaintMode mode) {
@@ -62,7 +60,7 @@ std::function<void(int X, int Y, uint8_t colorIndex)> Painter64::setPixelLambda(
     case PaintMode::AND:
       return [&] (int X, int Y, uint8_t pattern) { VGA_PIXEL(X, Y) &= pattern; };
     case PaintMode::ANDNOT:
-      return [&] (int X, int Y, uint8_t pattern) { VGA_PIXEL(X, Y) &= ((~pattern) & 63) | m_HVSync; };
+      return [&] (int X, int Y, uint8_t pattern) { VGA_PIXEL(X, Y) &= ((~pattern) & 63); };
     case PaintMode::XOR:
       return [&] (int X, int Y, uint8_t pattern) { VGA_PIXEL(X, Y) ^= pattern; };
     case PaintMode::Invert:
@@ -83,7 +81,7 @@ std::function<void(uint8_t * row, int x, uint8_t colorIndex)> Painter64::setRowP
     case PaintMode::AND:
       return [&] (uint8_t * row, int x, uint8_t pattern) { VGA_PIXELINROW(row, x) &= pattern; };
     case PaintMode::ANDNOT:
-      return [&] (uint8_t * row, int x, uint8_t pattern) { VGA_PIXELINROW(row, x) &= (~pattern & 63) | m_HVSync; };
+      return [&] (uint8_t * row, int x, uint8_t pattern) { VGA_PIXELINROW(row, x) &= (~pattern & 63); };
     case PaintMode::XOR:
       return [&] (uint8_t * row, int x, uint8_t pattern) { VGA_PIXELINROW(row, x) ^= pattern & 63; };
     case PaintMode::Invert:
@@ -104,7 +102,7 @@ std::function<void(int Y, int X1, int X2, uint8_t colorIndex)> Painter64::fillRo
     case PaintMode::AND:
       return [&] (int Y, int X1, int X2, uint8_t pattern) { rawANDRow(Y, X1, X2, pattern); };
     case PaintMode::ANDNOT:
-      return [&] (int Y, int X1, int X2, uint8_t pattern) { rawANDRow(Y, X1, X2, (~pattern & 63) | m_HVSync); };
+      return [&] (int Y, int X1, int X2, uint8_t pattern) { rawANDRow(Y, X1, X2, (~pattern & 63)); };
     case PaintMode::XOR:
       return [&] (int Y, int X1, int X2, uint8_t pattern) { rawXORRow(Y, X1, X2, pattern); };
     case PaintMode::Invert:
@@ -193,7 +191,7 @@ void Painter64::rawInvertRow(int y, int x1, int x2) {
   auto row = m_viewPort[y];
   for (int x = x1; x <= x2; ++x) {
     uint8_t * px = (uint8_t*) &VGA_PIXELINROW(row, x);
-    *px = m_HVSync | ~(*px);
+    *px = ~(*px);
   }
 }
 
@@ -489,8 +487,7 @@ void Painter64::rawDrawBitmap_RGBA2222(int destX, int destY, Bitmap const * bitm
   genericRawDrawBitmap_RGBA2222(destX, destY, bitmap, (uint8_t*)saveBackground, X1, Y1, XCount, YCount,
                                 [&] (int y)                             { return (uint8_t*) m_viewPort[y]; },              // rawGetRow
                                 [&] (uint8_t * row, int x)              { return VGA_PIXELINROW(row, x); },                // rawGetPixelInRow
-                                [&] (uint8_t * row, int x, uint8_t src) { setRowPixel(row, x, m_HVSync | (src & 0x3f)); }  // rawSetPixelInRow
-                               );
+                                [&] (uint8_t * row, int x, uint8_t src) { setRowPixel(row, x, (src & 0x3f)); }  //                             );
 }
 
 void Painter64::rawDrawBitmap_RGBA8888(int destX, int destY, Bitmap const * bitmap, void * saveBackground, int X1, int Y1, int XCount, int YCount) {
@@ -511,7 +508,7 @@ void Painter64::rawDrawBitmap_RGBA8888(int destX, int destY, Bitmap const * bitm
   genericRawDrawBitmap_RGBA8888(destX, destY, bitmap, (uint8_t*)saveBackground, X1, Y1, XCount, YCount,
                                  [&] (int y)                                      { return (uint8_t*) m_viewPort[y]; },   // rawGetRow
                                  [&] (uint8_t * row, int x)                       { return VGA_PIXELINROW(row, x); },     // rawGetPixelInRow
-                                 [&] (uint8_t * row, int x, RGBA8888 const & src) { setRowPixel(row, x, m_HVSync | (src.R >> 6) | (src.G >> 6 << 2) | (src.B >> 6 << 4)); }   // rawSetPixelInRow
+                                 [&] (uint8_t * row, int x, RGBA8888 const & src) { setRowPixel(row, x, (src.R >> 6) | (src.G >> 6 << 2) | (src.B >> 6 << 4)); }   // rawSetPixelInRow
                                 );
 }
 
@@ -574,7 +571,7 @@ void Painter64::rawDrawBitmapWithMatrix_RGBA8888(int destX, int destY, Rect & dr
   genericRawDrawTransformedBitmap_RGBA8888(destX, destY, drawingRect, bitmap, invMatrix,
                                           [&] (int y)                { return (uint8_t*) m_viewPort[y]; },  // rawGetRow
                                           // [&] (uint8_t * row, int x) { return VGA_PIXELINROW(row, x); },    // rawGetPixelInRow
-                                          [&] (uint8_t * row, int x, RGBA8888 const & src) { setRowPixel(row, x, m_HVSync | (src.R >> 6) | (src.G >> 6 << 2) | (src.B >> 6 << 4)); }   // rawSetPixelInRow
+                                          [&] (uint8_t * row, int x, RGBA8888 const & src) { setRowPixel(row, x, (src.R >> 6) | (src.G >> 6 << 2) | (src.B >> 6 << 4)); }   // rawSetPixelInRow
                                          );
 }
 

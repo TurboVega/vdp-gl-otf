@@ -37,7 +37,7 @@
 
 namespace fabgl {
 
-class Painter8 : public VGAPalettedController {
+class Painter8 : public Painter {
 
   public:
 
