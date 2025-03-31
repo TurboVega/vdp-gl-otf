@@ -483,14 +483,14 @@ public:
    * To avoid it a call to "processPrimitives()" should be performed very often.<br>
    * This method maintains a counter so can be nested.
    */
-  virtual void suspendBackgroundPrimitiveExecution() = 0;
+  virtual void suspendBackgroundPrimitiveExecution();
 
   /**
    * @brief Resumes drawings after suspendBackgroundPrimitiveExecution().
    *
    * Resumes drawings enabling vertical sync interrupt.
    */
-  virtual void resumeBackgroundPrimitiveExecution() = 0;
+  virtual void resumeBackgroundPrimitiveExecution();
 
   /**
    * @brief Draws immediately all primitives in the queue.
@@ -655,6 +655,8 @@ private:
   // memory pool used to allocate buffers of primitives
   LightMemoryPool        m_primDynMemPool;
 
+public:
+
   /**
    * @brief This is the 64 colors (8 GPIOs) initializer.
    *
@@ -691,8 +693,6 @@ private:
   virtual void end();
 
   static bool convertModelineToTimings(char const * modeline, VGATimings * timings);
-
-public:
 
   /**
    * @brief Sets current resolution using linux-like modeline.

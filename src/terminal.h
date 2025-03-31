@@ -939,7 +939,7 @@ public:
    *
    * @return False on fail to allocate required memory
    */
-  bool begin(BaseDisplayController * displayController, int maxColumns = -1, int maxRows = -1, Keyboard * keyboard = nullptr);
+  bool begin(VideoController * displayController, int maxColumns = -1, int maxRows = -1, Keyboard * keyboard = nullptr);
 
   /**
    * @brief Finalizes the terminal.
@@ -1632,7 +1632,7 @@ private:
   static Terminal *  s_activeTerminal;
 
 
-  BaseDisplayController * m_displayController;
+  VideoController * m_displayController;
   Canvas *           m_canvas;
   bool               m_bitmappedDisplayController;  // true = bitmapped, false = textual
 
