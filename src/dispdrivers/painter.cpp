@@ -54,7 +54,8 @@ void Painter::setViewPort(uint8_t** rows, uint32_t width, uint32_t height) {
   m_viewPortHeight = height;
 }
 
-Painter::postConstruct() {
+Painter::postConstruct(int signalTableSize) {
+  m_signalTableSize = signalTableSize;
   createPalette(0);
   uint16_t signalList[2] = { 0, 0 };
   m_signalList = createSignalList(signalList, 1);

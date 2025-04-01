@@ -48,11 +48,11 @@ namespace fabgl {
 VGA4Controller * VGA4Controller::s_instance = nullptr;
 
 VGA4Controller::VGA4Controller()
-  : VideoController(VGA4_LinesCount, VGA4_COLUMNSQUANTUM, NativePixelFormat::PALETTE4, 4, 1, ISRHandler, 256 * sizeof(uint32_t))
+  : VideoController(VGA4_LinesCount, VGA4_COLUMNSQUANTUM, NativePixelFormat::PALETTE4, 4, 1, ISRHandler)
 {
   s_instance = this;
   m_painter = new Painter4();
-  m_painter->postConstruct();
+  m_painter->postConstruct(256 * sizeof(uint32_t));
 }
 
 VGA4Controller::~VGA4Controller()

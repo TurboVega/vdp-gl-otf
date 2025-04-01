@@ -50,7 +50,7 @@ class Painter {
   Painter();
   ~Painter();
 
-  void postConstruct(); // call this after child class construction stuff
+  void postConstruct(int signalTableSize); // call this after child class construction finishes
 
   void setViewPort(uint8_t** rows, uint32_t width, uint32_t height);
 
@@ -1638,8 +1638,9 @@ class Painter {
    */
   void setItemInPalette(uint16_t paletteId, int index, RGB888 const & color);
 
-
   PaletteListItem * createSignalList(uint16_t * rawList, int entries, int row = 0);
+
+  PaletteListItem * getSignalList() { return m_signalList; }
 
   void deleteSignalList(PaletteListItem * item);
 

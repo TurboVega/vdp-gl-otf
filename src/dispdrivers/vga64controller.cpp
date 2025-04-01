@@ -46,7 +46,7 @@ VGA64Controller::VGA64Controller()
 {
   s_instance = this;
   m_painter = new Painter64();
-  m_painter->postConstruct();
+  m_painter->postConstruct(0);
   m_nativePixelFormat = NativePixelFormat::SBGR2222;
 }
 

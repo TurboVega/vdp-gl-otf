@@ -155,13 +155,13 @@ Sprite * Sprite::moveTo(int x, int y)
 }
 
 
-VideoController::VideoController(int linesCount, int columnsQuantum, NativePixelFormat nativePixelFormat, int viewPortRatioDiv, int viewPortRatioMul, intr_handler_t isrHandler, int signalTableSize)
+VideoController::VideoController(int linesCount, int columnsQuantum, NativePixelFormat nativePixelFormat,
+  int viewPortRatioDiv, int viewPortRatioMul, intr_handler_t isrHandler)
   : m_columnsQuantum(columnsQuantum),
     m_nativePixelFormat(nativePixelFormat),
     m_viewPortRatioDiv(viewPortRatioDiv),
     m_viewPortRatioMul(viewPortRatioMul),
     m_isrHandler(isrHandler),
-    m_signalTableSize(signalTableSize),
     m_primDynMemPool(FABGLIB_PRIMITIVES_DYNBUFFERS_SIZE)
 {
   m_linesCount = linesCount;

@@ -69,11 +69,11 @@ static inline __attribute__((always_inline)) void VGA2_SETPIXEL(int x, int y, in
 VGA2Controller * VGA2Controller::s_instance = nullptr;
 
 VGA2Controller::VGA2Controller()
-  : VideoController(VGA2_LinesCount, VGA2_COLUMNSQUANTUM, NativePixelFormat::PALETTE2, 8, 1, ISRHandler, 256 * sizeof(uint64_t))
+  : VideoController(VGA2_LinesCount, VGA2_COLUMNSQUANTUM, NativePixelFormat::PALETTE2, 8, 1, ISRHandler)
 {
   s_instance = this;
   m_painter = new Painter2();
-  m_painter->postConstruct();
+  m_painter->postConstruct(256 * sizeof(uint64_t));
 }
 
 VGA2Controller::~VGA2Controller()
