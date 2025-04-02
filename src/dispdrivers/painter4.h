@@ -109,6 +109,56 @@ class Painter4 : public Painter {
 
   protected:
 
+  inline void VGA4_SETPIXELINROW(uint8_t * row, int x, int value) {
+    int brow = x >> 2;
+    int shift = 6 - (x & 3) * 2;
+    row[brow] ^= ((value << shift) ^ row[brow]) & (3 << shift);
+  }
+
+  inline int VGA4_GETPIXELINROW(uint8_t * row, int x) {
+    int brow = x >> 2;
+    int shift = 6 - (x & 3) * 2;
+    return (row[brow] >> shift) & 3;
+  }
+
+  #define VGA4_INVERTPIXELINROW(row, x)       (row)[(x) >> 2] ^= 3 << (6 - ((x) & 3) * 2)
+
+  inline void VGA4_SETPIXEL(int x, int y, int value) {
+    auto row = (uint8_t*) sgetScanline(y);
+    int brow = x >> 2;
+    int shift = 6 - (x & 3) * 2;
+    row[brow] ^= ((value << shift) ^ row[brow]) & (3 << shift);
+  }
+
+  inline void VGA4_ORPIXEL(int x, int y, int value) {
+    auto row = (uint8_t*) sgetScanline(y);
+    int brow = x >> 2;
+    int shift = 6 - (x & 3) * 2;
+    row[brow] |= (value << shift);
+  }
+
+  inline void VGA4_ANDPIXEL(int x, int y, int value) {
+    auto row = (uint8_t*) sgetScanline(y);
+    int brow = x >> 2;
+    int shift = 6 - (x & 3) * 2;
+    // byte to write needs to have 1s in non-masked bits
+    value = 0xFF ^ (3 << shift) | (value << shift);
+    row[brow] &= value;
+  }
+
+  inline void VGA4_XORPIXEL(int x, int y, int value) {
+    auto row = (uint8_t*) sgetScanline(y);
+    int brow = x >> 2;
+    int shift = 6 - (x & 3) * 2;
+    row[brow] ^= (value << shift);
+  }
+
+  #define VGA4_GETPIXEL(x, y)                 VGA4_GETPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
+
+  #define VGA4_INVERT_PIXEL(x, y)             VGA4_INVERTPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
+
+  #define VGA4_COLUMNSQUANTUM 16
+
   // methods to get lambdas to get/set pixels
   std::function<uint8_t(RGB888 const &)> getPixelLambda(PaintMode mode);
   std::function<void(int X, int Y, uint8_t colorIndex)> setPixelLambda(PaintMode mode);

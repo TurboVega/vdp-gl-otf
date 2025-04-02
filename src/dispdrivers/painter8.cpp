@@ -37,68 +37,18 @@
 
 namespace fabgl {
 
-/*
-To improve drawing and rendering speed pixels order is a bit oddy because we want to pack pixels (3 bits) into a uint32_t and ESP32 is little-endian.
-8 pixels (24 bits) are packed in 3 bytes:
-bytes:      0        1        2    ...
-bits:   76543210 76543210 76543210 ...
-pixels: 55666777 23334445 00011122 ...
-bits24: 0                          1...
-*/
-
-static inline __attribute__((always_inline)) void VGA8_SETPIXELINROW(uint8_t * row, int x, int value) {
-  uint32_t * bits24 = (uint32_t*)(row + (x >> 3) * 3);  // x / 8 * 3
-  int shift = 21 - (x & 7) * 3;
-  *bits24 ^= ((value << shift) ^ *bits24) & (7 << shift);
-}
-
-static inline __attribute__((always_inline)) int VGA8_GETPIXELINROW(uint8_t * row, int x) {
-  uint32_t * bits24 = (uint32_t*)(row + (x >> 3) * 3);  // x / 8 * 3
-  int shift = 21 - (x & 7) * 3;
-  return (*bits24 >> shift) & 7;
-}
-
-#define VGA8_INVERTPIXELINROW(row, x)       *((uint32_t*)(row + ((x) >> 3) * 3)) ^= 7 << (21 - ((x) & 7) * 3)
-
-static inline __attribute__((always_inline)) void VGA8_SETPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) sgetScanline(y);
-  uint32_t * bits24 = (uint32_t*)(row + (x >> 3) * 3);  // x / 8 * 3
-  int shift = 21 - (x & 7) * 3;
-  *bits24 ^= ((value << shift) ^ *bits24) & (7 << shift);
-}
-
-static inline __attribute__((always_inline)) void VGA8_ORPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) sgetScanline(y);
-  uint32_t * bits24 = (uint32_t*)(row + (x >> 3) * 3);  // x / 8 * 3
-  int shift = 21 - (x & 7) * 3;
-  *bits24 |= (value << shift);
-}
-
-static inline __attribute__((always_inline)) void VGA8_ANDPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) sgetScanline(y);
-  uint32_t * bits24 = (uint32_t*)(row + (x >> 3) * 3);  // x / 8 * 3
-  int shift = 21 - (x & 7) * 3;
-  value = (~0x00) ^ (7 << shift) | (value << shift);
-  *bits24 &= value;
-}
-
-static inline __attribute__((always_inline)) void VGA8_XORPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) sgetScanline(y);
-  uint32_t * bits24 = (uint32_t*)(row + (x >> 3) * 3);  // x / 8 * 3
-  int shift = 21 - (x & 7) * 3;
-  *bits24 ^= (value << shift);
-}
-
-#define VGA8_GETPIXEL(x, y)                 VGA8_GETPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
-
-#define VGA8_INVERT_PIXEL(x, y)             VGA8_INVERTPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
-
-#define VGA8_COLUMNSQUANTUM 16
-
 /*************************************************************************************/
 /* Painter8 definitions */
 
 Painter8::Painter8() {
+  setPaletteItem(0, RGB888(0, 0, 0));       // 0: black
+  setPaletteItem(1, RGB888(128, 0, 0));     // 1: red
+  setPaletteItem(2, RGB888(0, 128, 0));     // 2: green
+  setPaletteItem(3, RGB888(0, 0, 128));     // 3: blue
+  setPaletteItem(4, RGB888(255, 0, 0));     // 4: bright red
+  setPaletteItem(5, RGB888(0, 255, 0));     // 5: bright green
+  setPaletteItem(6, RGB888(0, 0, 255));     // 6: bright blue
+  setPaletteItem(7, RGB888(255, 255, 255)); // 7: white
 }
 
 Painter8::~Painter8() {

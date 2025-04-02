@@ -146,9 +146,9 @@ class Painter {
 
   protected:
 
-  uint8_t inline __attribute__((always_inline)) preparePixel(RGB222 rgb) { return (rgb.B << VGA_BLUE_BIT) | (rgb.G << VGA_GREEN_BIT) | (rgb.R << VGA_RED_BIT); }
+  uint8_t inline preparePixel(RGB222 rgb) { return (rgb.B << VGA_BLUE_BIT) | (rgb.G << VGA_GREEN_BIT) | (rgb.R << VGA_RED_BIT); }
 
-  template <typename TPreparePixel, typename TRawSetPixel>
+  template <typename TPainter, typename TPreparePixel, typename TRawSetPixel>
   void genericSetPixelAt(PixelDesc const & pixelDesc, Rect & updateRect, TPreparePixel preparePixel, TRawSetPixel rawSetPixel)
   {
     const int x = pixelDesc.pos.X + paintState().origin.X;
@@ -161,15 +161,15 @@ class Painter {
 
     if (x >= clipX1 && x <= clipX2 && y >= clipY1 && y <= clipY2) {
       updateRect = updateRect.merge(Rect(x, y, x, y));
-      rawSetPixel(x, y, preparePixel(pixelDesc.color));
+      ((TPainter*)this)->rawSetPixel(x, y, ((TPainter*)this)->preparePixel(pixelDesc.color));
     }
   }
 
 
   // coordinates are absolute values (not relative to origin)
   // line clipped on current absolute clipping rectangle
-  template <typename TPreparePixel, typename TRawFillRow, typename TRawSetPixel>
-  void genericAbsDrawLine(int X1, int Y1, int X2, int Y2, RGB888 const & color, TPreparePixel preparePixel, TRawFillRow rawFillRow, TRawSetPixel rawSetPixel)
+  template <typename TPainter, typename TPreparePixel, typename TRawSetPixel>
+  void genericAbsDrawLine(int X1, int Y1, int X2, int Y2, RGB888 const & color, TPreparePixel preparePixel, TRawSetPixel rawSetPixel)
   {
     auto & pState = paintState();
     if (pState.penWidth > 1) {
@@ -178,7 +178,7 @@ class Painter {
     }
     auto & lineOptions = pState.lineOptions;
     bool dottedLine = lineOptions.usePattern;
-    auto pattern = preparePixel(color);
+    auto pattern = ((TPainter*)this)->preparePixel(color);
     if (!dottedLine && (Y1 == Y2)) {
       // horizontal line
       if (Y1 < pState.absClippingRect.Y1 || Y1 > pState.absClippingRect.Y2)
@@ -225,7 +225,7 @@ class Painter {
       Y1 = iclamp(Y1, pState.absClippingRect.Y1, pState.absClippingRect.Y2);
       Y2 = iclamp(Y2, pState.absClippingRect.Y1, pState.absClippingRect.Y2);
       for (int y = Y1; y <= Y2; ++y)
-        rawSetPixel(X1, y, pattern);
+        ((TPainter*)this)->rawSetPixel(X1, y, pattern);
     } else {
       // other cases (Bresenham's algorithm)
       // TODO: to optimize
@@ -261,7 +261,7 @@ class Painter {
           }
         }
         if (drawPixel && pState.absClippingRect.contains(X1, Y1)) {
-          rawSetPixel(X1, Y1, pattern);
+          ((TPainter*)this)->rawSetPixel(X1, Y1, pattern);
         }
         if (omittingFirst)
           omittingFirst = false;
@@ -282,10 +282,10 @@ class Painter {
 
 
   // McIlroy's algorithm
-  template <typename TPreparePixel, typename TRawSetPixel>
+  template <typename TPainter, typename TPreparePixel, typename TRawSetPixel>
   void genericDrawEllipse(Size const & size, Rect & updateRect, TPreparePixel preparePixel, TRawSetPixel rawSetPixel)
   {
-    auto pattern = preparePixel(getActualPenColor());
+    auto pattern = ((TPainter*)this)->preparePixel(getActualPenColor());
 
     const int clipX1 = paintState().absClippingRect.X1;
     const int clipY1 = paintState().absClippingRect.Y1;
@@ -321,15 +321,15 @@ class Painter {
 
       if (col1 >= clipX1 && col1 <= clipX2) {
         if (row1 >= clipY1 && row1 <= clipY2)
-          rawSetPixel(col1, row1, pattern);
+          ((TPainter*)this)->rawSetPixel(col1, row1, pattern);
         if (row2 >= clipY1 && row2 <= clipY2)
-          rawSetPixel(col1, row2, pattern);
+          ((TPainter*)this)->rawSetPixel(col1, row2, pattern);
       }
       if (col2 >= clipX1 && col2 <= clipX2) {
         if (row1 >= clipY1 && row1 <= clipY2)
-          rawSetPixel(col2, row1, pattern);
+          ((TPainter*)this)->rawSetPixel(col2, row1, pattern);
         if (row2 >= clipY1 && row2 <= clipY2)
-          rawSetPixel(col2, row2, pattern);
+          ((TPainter*)this)->rawSetPixel(col2, row2, pattern);
       }
 
       if (t + b2 * x <= crit1 || t + a2 * y <= crit3) {
@@ -353,10 +353,10 @@ class Painter {
 
 
   // Arc drawn using modified Alois Zingl's algorith, which is a modified Bresenham's algorithm
-  template <typename TPreparePixel, typename TRawSetPixel>
+  template <typename TPainter, typename TPreparePixel, typename TRawSetPixel>
   void genericDrawArc(Rect const & rect, Rect & updateRect, TPreparePixel preparePixel, TRawSetPixel rawSetPixel)
   {
-    auto pattern = preparePixel(getActualPenColor());
+    auto pattern = ((TPainter*)this)->preparePixel(getActualPenColor());
 
     const int clipX1 = paintState().absClippingRect.X1;
     const int clipY1 = paintState().absClippingRect.Y1;
@@ -387,19 +387,19 @@ class Painter {
     do {
       if (quadrantContainsArcPixel(quadrants[0], startInfo, endInfo, y, x)) {
         if (centerX + y >= clipX1 && centerX + y <= clipX2 && centerY + x >= clipY1 && centerY + x <= clipY2)
-          rawSetPixel(centerX + y, centerY + x, pattern);
+          ((TPainter*)this)->rawSetPixel(centerX + y, centerY + x, pattern);
       }
       if (quadrantContainsArcPixel(quadrants[1], startInfo, endInfo, x, -y)) {
         if (centerX + x >= clipX1 && centerX + x <= clipX2 && centerY - y >= clipY1 && centerY - y <= clipY2)
-          rawSetPixel(centerX + x, centerY - y, pattern);
+          ((TPainter*)this)->rawSetPixel(centerX + x, centerY - y, pattern);
       }
       if (quadrantContainsArcPixel(quadrants[2], startInfo, endInfo, -y, -x)) {
         if (centerX - y >= clipX1 && centerX - y <= clipX2 && centerY - x >= clipY1 && centerY - x <= clipY2)
-          rawSetPixel(centerX - y, centerY - x, pattern);
+          ((TPainter*)this)->rawSetPixel(centerX - y, centerY - x, pattern);
       }
       if (quadrantContainsArcPixel(quadrants[3], startInfo, endInfo, -x, y)) {
         if (centerX - x >= clipX1 && centerX - x <= clipX2 && centerY + y >= clipY1 && centerY + y <= clipY2)
-          rawSetPixel(centerX - x, centerY + y, pattern);
+          ((TPainter*)this)->rawSetPixel(centerX - x, centerY + y, pattern);
       }
       r = err;
       if (r <= y) {
@@ -413,10 +413,10 @@ class Painter {
 
 
   // Segment drawn using modified Alois Zingl's algorith, which is a modified Bresenham's algorithm
-  template <typename TPreparePixel, typename TRawFillRow>
-  void genericFillSegment(Rect const & rect, Rect & updateRect, TPreparePixel preparePixel, TRawFillRow rawFillRow)
+  template <typename TPainter, typename TPreparePixel>
+  void genericFillSegment(Rect const & rect, Rect & updateRect, TPreparePixel preparePixel)
   {
-    auto pattern = preparePixel(getActualBrushColor());
+    auto pattern = ((TPainter*)this)->preparePixel(getActualBrushColor());
 
     const int clipX1 = paintState().absClippingRect.X1;
     const int clipY1 = paintState().absClippingRect.Y1;
@@ -456,7 +456,7 @@ class Painter {
     int maxX = -999999;
     chordDeltaInfo.newRowCheck(y);
 
-    std::function<void(int, int, int)> drawRow = [&rawFillRow, &clipX1, &clipX2, &pattern] (int row, int minX, int maxX) {
+    std::function<void(int, int, int)> drawRow = [&clipX1, &clipX2, &pattern] (int row, int minX, int maxX) {
       if (minX <= clipX2 && maxX >= clipX1) {
         const int X1 = iclamp(minX, clipX1, clipX2);
         const int X2 = iclamp(maxX, clipX1, clipX2);
@@ -537,10 +537,10 @@ class Painter {
 
 
   // Sector drawn using modified Alois Zingl's algorith, which is a modified Bresenham's algorithm
-  template <typename TPreparePixel, typename TRawFillRow>
-  void genericFillSector(Rect const & rect, Rect & updateRect, TPreparePixel preparePixel, TRawFillRow rawFillRow)
+  template <typename TPainter, typename TPreparePixel>
+  void genericFillSector(Rect const & rect, Rect & updateRect, TPreparePixel preparePixel)
   {
-    auto pattern = preparePixel(getActualBrushColor());
+    auto pattern = ((TPainter*)this)->preparePixel(getActualBrushColor());
 
     const int clipX1 = paintState().absClippingRect.X1;
     const int clipY1 = paintState().absClippingRect.Y1;
@@ -586,7 +586,7 @@ class Painter {
     bool shownStartLine = false;
     bool shownEndLine = false;
 
-    std::function<void(int, int, int)> drawRow = [&rawFillRow, &clipX1, &clipX2, &pattern] (int row, int minX, int maxX) {
+    std::function<void(int, int, int)> drawRow = [&clipX1, &clipX2, &pattern] (int row, int minX, int maxX) {
       if (minX <= clipX2 && maxX >= clipX1) {
         const int X1 = iclamp(minX, clipX1, clipX2);
         const int X2 = iclamp(maxX, clipX1, clipX2);
@@ -808,7 +808,7 @@ class Painter {
   }
 
 
-  template <typename TPreparePixel, typename TRawGetRow, typename TRawSetPixelInRow>
+  template <typename TPainter, typename TPreparePixel, typename TRawGetRow, typename TRawSetPixelInRow>
   void genericDrawGlyph(Glyph const & glyph, GlyphOptions glyphOptions, RGB888 penColor, RGB888 brushColor, Rect & updateRect, TPreparePixel preparePixel, TRawGetRow rawGetRow, TRawSetPixelInRow rawSetPixelInRow)
   {
     if (!glyphOptions.bold && !glyphOptions.italic && !glyphOptions.blank && !glyphOptions.underline && !glyphOptions.doubleWidth && glyph.width <= 32)
@@ -819,7 +819,7 @@ class Painter {
 
 
   // TODO: Italic doesn't work well when clipping rect is specified
-  template <typename TPreparePixel, typename TRawGetRow, typename TRawSetPixelInRow>
+  template <typename TPainter, typename TPreparePixel, typename TRawGetRow, typename TRawSetPixelInRow>
   void genericDrawGlyph_full(Glyph const & glyph, GlyphOptions glyphOptions, RGB888 penColor, RGB888 brushColor, Rect & updateRect, TPreparePixel preparePixel, TRawGetRow rawGetRow, TRawSetPixelInRow rawSetPixelInRow)
   {
     const int clipX1 = paintState().absClippingRect.X1;
@@ -913,30 +913,30 @@ class Painter {
       if (penColor.B > 128) penColor.B = 128;
     }
 
-    auto penPattern   = preparePixel(penColor);
-    auto brushPattern = preparePixel(brushColor);
-    auto boldPattern  = bold ? preparePixel(RGB888(penColor.R / 2 + 1,
+    auto penPattern   = ((TPainter*)this)->preparePixel(penColor);
+    auto brushPattern = ((TPainter*)this)->preparePixel(brushColor);
+    auto boldPattern  = bold ? ((TPainter*)this)->preparePixel(RGB888(penColor.R / 2 + 1,
                                                    penColor.G / 2 + 1,
                                                    penColor.B / 2 + 1))
-                             : preparePixel(RGB888(0, 0, 0));
+                             : ((TPainter*)this)->preparePixel(RGB888(0, 0, 0));
 
     for (int y = Y1; y < Y1 + YCount; ++y, ++destY) {
 
       // true if previous pixel has been set
       bool prevSet = false;
 
-      auto dstrow = rawGetRow(destY);
+      auto dstrow = ((TPainter*)this)->rawGetRow(destY);
       auto srcrow = glyphData + y * glyphWidthByte;
 
       if (underline && y == glyphHeight - FABGLIB_UNDERLINE_POSITION - 1) {
 
         for (int x = X1, adestX = destX + skewAdder; x < X1 + XCount && adestX <= clipX2; ++x, ++adestX) {
-          rawSetPixelInRow(dstrow, adestX, blank ? brushPattern : penPattern);
+          ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX, blank ? brushPattern : penPattern);
           if (doubleWidth) {
             ++adestX;
             if (adestX > clipX2)
               break;
-            rawSetPixelInRow(dstrow, adestX, blank ? brushPattern : penPattern);
+            ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX, blank ? brushPattern : penPattern);
           }
         }
 
@@ -944,13 +944,13 @@ class Painter {
 
         for (int x = X1, adestX = destX + skewAdder; x < X1 + XCount && adestX <= clipX2; ++x, ++adestX) {
           if ((srcrow[x >> 3] << (x & 7)) & 0x80 && !blank) {
-            rawSetPixelInRow(dstrow, adestX, penPattern);
+            ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX, penPattern);
             prevSet = true;
           } else if (bold && prevSet) {
-            rawSetPixelInRow(dstrow, adestX, boldPattern);
+            ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX, boldPattern);
             prevSet = false;
           } else if (fillBackground) {
-            rawSetPixelInRow(dstrow, adestX, brushPattern);
+            ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX, brushPattern);
             prevSet = false;
           } else {
             prevSet = false;
@@ -960,9 +960,9 @@ class Painter {
             if (adestX > clipX2)
               break;
             if (fillBackground)
-              rawSetPixelInRow(dstrow, adestX, prevSet ? penPattern : brushPattern);
+              ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX, prevSet ? penPattern : brushPattern);
             else if (prevSet)
-              rawSetPixelInRow(dstrow, adestX, penPattern);
+              ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX, penPattern);
           }
         }
 
@@ -982,7 +982,7 @@ class Painter {
   //   glyphOptions.reduceLuminosity: 0 or 1
   //   glyphOptions.... others = 0
   //   paintState().paintOptions.swapFGBG: 0 or 1
-  template <typename TPreparePixel, typename TRawGetRow, typename TRawSetPixelInRow>
+  template <typename TPainter, typename TPreparePixel, typename TRawGetRow, typename TRawSetPixelInRow>
   void genericDrawGlyph_light(Glyph const & glyph, GlyphOptions glyphOptions, RGB888 penColor, RGB888 brushColor, Rect & updateRect, TPreparePixel preparePixel, TRawGetRow rawGetRow, TRawSetPixelInRow rawSetPixelInRow)
   {
     const int clipX1 = paintState().absClippingRect.X1;
@@ -1050,11 +1050,11 @@ class Painter {
 
     bool fillBackground = glyphOptions.fillBackground;
 
-    auto penPattern   = preparePixel(penColor);
-    auto brushPattern = preparePixel(brushColor);
+    auto penPattern   = ((TPainter*)this)->preparePixel(penColor);
+    auto brushPattern = ((TPainter*)this)->preparePixel(brushColor);
 
     for (int y = Y1; y < Y1 + YCount; ++y, ++destY) {
-      auto dstrow = rawGetRow(destY);
+      auto dstrow = ((TPainter*)this)->rawGetRow(destY);
       uint8_t const * srcrow = glyphData + y * glyphWidthByte;
 
       uint32_t src = (srcrow[0] << 24) | (srcrow[1] << 16) | (srcrow[2] << 8) | (srcrow[3]);
@@ -1062,19 +1062,19 @@ class Painter {
       if (fillBackground) {
         // filled background
         for (int x = X1, adestX = destX; x < X1 + XCount; ++x, ++adestX, src <<= 1)
-          rawSetPixelInRow(dstrow, adestX, src & 0x80000000 ? penPattern : brushPattern);
+          ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX, src & 0x80000000 ? penPattern : brushPattern);
       } else {
         // transparent background
         for (int x = X1, adestX = destX; x < X1 + XCount; ++x, ++adestX, src <<= 1)
           if (src & 0x80000000)
-            rawSetPixelInRow(dstrow, adestX, penPattern);
+            ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX, penPattern);
       }
     }
   }
 
 
-  template <typename TRawInvertRow>
-  void genericInvertRect(Rect const & rect, Rect & updateRect, TRawInvertRow rawInvertRow)
+  template <typename TPainter>
+  void genericInvertRect(Rect const & rect, Rect & updateRect)
   {
     const int origX = paintState().origin.X;
     const int origY = paintState().origin.Y;
@@ -1096,11 +1096,11 @@ class Painter {
   }
 
 
-  template <typename TPreparePixel, typename TRawGetRow, typename TRawGetPixelInRow, typename TRawSetPixelInRow>
+  template <typename TPainter, typename TPreparePixel, typename TRawGetRow, typename TRawGetPixelInRow, typename TRawSetPixelInRow>
   void genericSwapFGBG(Rect const & rect, Rect & updateRect, TPreparePixel preparePixel, TRawGetRow rawGetRow, TRawGetPixelInRow rawGetPixelInRow, TRawSetPixelInRow rawSetPixelInRow)
   {
-    auto penPattern   = preparePixel(paintState().penColor);
-    auto brushPattern = preparePixel(paintState().brushColor);
+    auto penPattern   = ((TPainter*)this)->preparePixel(paintState().penColor);
+    auto brushPattern = ((TPainter*)this)->preparePixel(paintState().brushColor);
 
     int origX = paintState().origin.X;
     int origY = paintState().origin.Y;
@@ -1118,19 +1118,19 @@ class Painter {
     updateRect = updateRect.merge(Rect(x1, y1, x2, y2));
 
     for (int y = y1; y <= y2; ++y) {
-      auto row = rawGetRow(y);
+      auto row = ((TPainter*)this)->rawGetRow(y);
       for (int x = x1; x <= x2; ++x) {
-        auto px = rawGetPixelInRow(row, x);
+        auto px = ((TPainter*)this)->rawGetPixelInRow(row, x);
         if (px == penPattern)
-          rawSetPixelInRow(row, x, brushPattern);
+          ((TPainter*)this)->rawSetPixelInRow(row, x, brushPattern);
         else if (px == brushPattern)
-          rawSetPixelInRow(row, x, penPattern);
+          ((TPainter*)this)->rawSetPixelInRow(row, x, penPattern);
       }
     }
   }
 
 
-  template <typename TRawGetRow, typename TRawGetPixelInRow, typename TRawSetPixelInRow>
+  template <typename TPainter, typename TRawGetRow, typename TRawGetPixelInRow, typename TRawSetPixelInRow>
   void genericCopyRect(Rect const & source, Rect & updateRect, TRawGetRow rawGetRow, TRawGetPixelInRow rawGetPixelInRow, TRawSetPixelInRow rawSetPixelInRow)
   {
     const int clipX1 = paintState().absClippingRect.X1;
@@ -1161,34 +1161,34 @@ class Painter {
 
     for (int y = startY, i = 0; i < height; y += incY, ++i) {
       if (y >= clipY1 && y <= clipY2) {
-        auto srcRow = rawGetRow(y - deltaY);
-        auto dstRow = rawGetRow(y);
+        auto srcRow = ((TPainter*)this)->rawGetRow(y - deltaY);
+        auto dstRow = ((TPainter*)this)->rawGetRow(y);
         for (int x = startX, j = 0; j < width; x += incX, ++j) {
           if (x >= clipX1 && x <= clipX2)
-            rawSetPixelInRow(dstRow, x, rawGetPixelInRow(srcRow, x - deltaX));
+            ((TPainter*)this)->rawSetPixelInRow(dstRow, x, ((TPainter*)this)->rawGetPixelInRow(srcRow, x - deltaX));
         }
       }
     }
   }
 
 
-  template <typename TRawGetRow, typename TRawSetPixelInRow, typename TDataType>
+  template <typename TPainter, typename TRawGetRow, typename TRawSetPixelInRow, typename TDataType>
   void genericRawDrawBitmap_Native(int destX, int destY, TDataType * data, int width, int X1, int Y1, int XCount, int YCount,
                                    TRawGetRow rawGetRow, TRawSetPixelInRow rawSetPixelInRow)
   {
     const int yEnd = Y1 + YCount;
     const int xEnd = X1 + XCount;
     for (int y = Y1; y < yEnd; ++y, ++destY) {
-      auto dstrow = rawGetRow(destY);
+      auto dstrow = ((TPainter*)this)->rawGetRow(destY);
       auto src = data + y * width + X1;
       for (int x = X1, adestX = destX; x < xEnd; ++x, ++adestX, ++src)
-        rawSetPixelInRow(dstrow, adestX, *src);
+        ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX, *src);
     }
   }
 
 
 
-  template <typename TRawGetRow, typename TRawGetPixelInRow, typename TRawSetPixelInRow, typename TBackground>
+  template <typename TPainter, typename TRawGetRow, typename TRawGetPixelInRow, typename TRawSetPixelInRow, typename TBackground>
   void genericRawDrawBitmap_Mask(int destX, int destY, Bitmap const * bitmap, TBackground * saveBackground, int X1, int Y1, int XCount, int YCount,
                                  TRawGetRow rawGetRow, TRawGetPixelInRow rawGetPixelInRow, TRawSetPixelInRow rawSetPixelInRow)
   {
@@ -1202,13 +1202,13 @@ class Painter {
 
       // save background and draw the bitmap
       for (int y = Y1; y < yEnd; ++y, ++destY) {
-        auto dstrow = rawGetRow(destY);
+        auto dstrow = ((TPainter*)this)->rawGetRow(destY);
         auto savePx = saveBackground + y * width + X1;
         auto src = data + y * rowlen;
         for (int x = X1, adestX = destX; x < xEnd; ++x, ++adestX, ++savePx) {
-          *savePx = rawGetPixelInRow(dstrow, adestX);
+          *savePx = ((TPainter*)this)->rawGetPixelInRow(dstrow, adestX);
           if ((src[x >> 3] << (x & 7)) & 0x80)
-            rawSetPixelInRow(dstrow, adestX);
+            ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX);
         }
       }
 
@@ -1216,11 +1216,11 @@ class Painter {
 
       // just draw the bitmap
       for (int y = Y1; y < yEnd; ++y, ++destY) {
-        auto dstrow = rawGetRow(destY);
+        auto dstrow = ((TPainter*)this)->rawGetRow(destY);
         auto src = data + y * rowlen;
         for (int x = X1, adestX = destX; x < xEnd; ++x, ++adestX) {
           if ((src[x >> 3] << (x & 7)) & 0x80)
-            rawSetPixelInRow(dstrow, adestX);
+            ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX);
         }
       }
 
@@ -1228,7 +1228,7 @@ class Painter {
   }
 
 
-  template <typename TRawGetRow, typename TRawGetPixelInRow, typename TRawSetPixelInRow, typename TBackground>
+  template <typename TPainter, typename TRawGetRow, typename TRawGetPixelInRow, typename TRawSetPixelInRow, typename TBackground>
   void genericRawDrawBitmap_RGBA2222(int destX, int destY, Bitmap const * bitmap, TBackground * saveBackground, int X1, int Y1, int XCount, int YCount,
                                      TRawGetRow rawGetRow, TRawGetPixelInRow rawGetPixelInRow, TRawSetPixelInRow rawSetPixelInRow)
   {
@@ -1241,13 +1241,13 @@ class Painter {
 
       // save background and draw the bitmap
       for (int y = Y1; y < yEnd; ++y, ++destY) {
-        auto dstrow = rawGetRow(destY);
+        auto dstrow = ((TPainter*)this)->rawGetRow(destY);
         auto savePx = saveBackground + y * width + X1;
         auto src = data + y * width + X1;
         for (int x = X1, adestX = destX; x < xEnd; ++x, ++adestX, ++savePx, ++src) {
-          *savePx = rawGetPixelInRow(dstrow, adestX);
+          *savePx = ((TPainter*)this)->rawGetPixelInRow(dstrow, adestX);
           if (*src & 0xc0)  // alpha > 0 ?
-            rawSetPixelInRow(dstrow, adestX, *src);
+            ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX, *src);
         }
       }
 
@@ -1255,11 +1255,11 @@ class Painter {
 
       // just draw the bitmap
       for (int y = Y1; y < yEnd; ++y, ++destY) {
-        auto dstrow = rawGetRow(destY);
+        auto dstrow = ((TPainter*)this)->rawGetRow(destY);
         auto src = data + y * width + X1;
         for (int x = X1, adestX = destX; x < xEnd; ++x, ++adestX, ++src) {
           if (*src & 0xc0)  // alpha > 0 ?
-            rawSetPixelInRow(dstrow, adestX, *src);
+            ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX, *src);
         }
       }
 
@@ -1267,7 +1267,7 @@ class Painter {
   }
 
 
-  template <typename TRawGetRow, typename TRawGetPixelInRow, typename TRawSetPixelInRow, typename TBackground>
+  template <typename TPainter, typename TRawGetRow, typename TRawGetPixelInRow, typename TRawSetPixelInRow, typename TBackground>
   void genericRawDrawBitmap_RGBA8888(int destX, int destY, Bitmap const * bitmap, TBackground * saveBackground, int X1, int Y1, int XCount, int YCount,
                                      TRawGetRow rawGetRow, TRawGetPixelInRow rawGetPixelInRow, TRawSetPixelInRow rawSetPixelInRow)
   {
@@ -1280,13 +1280,13 @@ class Painter {
 
       // save background and draw the bitmap
       for (int y = Y1; y < yEnd; ++y, ++destY) {
-        auto dstrow = rawGetRow(destY);
+        auto dstrow = ((TPainter*)this)->rawGetRow(destY);
         auto savePx = saveBackground + y * width + X1;
         auto src = data + y * width + X1;
         for (int x = X1, adestX = destX; x < xEnd; ++x, ++adestX, ++savePx, ++src) {
-          *savePx = rawGetPixelInRow(dstrow, adestX);
+          *savePx = ((TPainter*)this)->rawGetPixelInRow(dstrow, adestX);
           if (src->A)
-            rawSetPixelInRow(dstrow, adestX, *src);
+            ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX, *src);
         }
       }
 
@@ -1294,11 +1294,11 @@ class Painter {
 
       // just draw the bitmap
       for (int y = Y1; y < yEnd; ++y, ++destY) {
-        auto dstrow = rawGetRow(destY);
+        auto dstrow = ((TPainter*)this)->rawGetRow(destY);
         auto src = data + y * width + X1;
         for (int x = X1, adestX = destX; x < xEnd; ++x, ++adestX, ++src) {
           if (src->A)
-            rawSetPixelInRow(dstrow, adestX, *src);
+            ((TPainter*)this)->rawSetPixelInRow(dstrow, adestX, *src);
         }
       }
 
@@ -1306,7 +1306,7 @@ class Painter {
   }
 
 
-  template <typename TRawGetRow, typename TRawGetPixelInRow, typename TBuffer>
+  template <typename TPainter, typename TRawGetRow, typename TRawGetPixelInRow, typename TBuffer>
   void genericRawCopyToBitmap(int srcX, int srcY, int width, TBuffer * saveBuffer, int X1, int Y1, int XCount, int YCount,
                             TRawGetRow rawGetRow, TRawGetPixelInRow rawGetPixelInRow)
   {
@@ -1315,16 +1315,16 @@ class Painter {
 
     // save screen area to buffer
     for (int y = Y1; y < yEnd; ++y, ++srcY) {
-      auto srcrow = rawGetRow(srcY);
+      auto srcrow = ((TPainter*)this)->rawGetRow(srcY);
       auto savePx = saveBuffer + y * width + X1;
       for (int x = X1, asrcX = srcX; x < xEnd; ++x, ++asrcX, ++savePx) {
-        *savePx = rawGetPixelInRow(srcrow, asrcX);
+        *savePx = ((TPainter*)this)->rawGetPixelInRow(srcrow, asrcX);
       }
     }
   }
 
 
-  template <typename TRawGetRow, /*typename TRawGetPixelInRow,*/ typename TRawSetPixelInRow /*, typename TBackground */>
+  template <typename TPainter, typename TRawGetRow, /*typename TRawGetPixelInRow,*/ typename TRawSetPixelInRow /*, typename TBackground */>
   void genericRawDrawTransformedBitmap_Mask(int destX, int destY, Rect drawingRect, Bitmap const * bitmap, const float * invMatrix,
                                      TRawGetRow rawGetRow, /* TRawGetPixelInRow rawGetPixelInRow, */ TRawSetPixelInRow rawSetPixelInRow)
   {
@@ -1355,13 +1355,13 @@ class Painter {
         auto srcRow = data + (int)srcPos[1] * rowlen;
         int srcXint = (int)srcPos[0];
         if ((srcRow[srcXint >> 3] << (srcXint & 7)) & 0x80)
-          rawSetPixelInRow(rawGetRow((int)y + destY), (int)x + destX);
+          ((TPainter*)this)->rawSetPixelInRow(((TPainter*)this)->rawGetRow((int)y + destY), (int)x + destX);
       }
     }
   }
 
 
-  template <typename TRawGetRow, /*typename TRawGetPixelInRow,*/ typename TRawSetPixelInRow /*, typename TBackground */>
+  template <typename TPainter, typename TRawGetRow, /*typename TRawGetPixelInRow,*/ typename TRawSetPixelInRow /*, typename TBackground */>
   void genericRawDrawTransformedBitmap_RGBA2222(int destX, int destY, Rect drawingRect, Bitmap const * bitmap, const float * invMatrix,
                                      TRawGetRow rawGetRow, /* TRawGetPixelInRow rawGetPixelInRow, */ TRawSetPixelInRow rawSetPixelInRow)
   {
@@ -1391,13 +1391,13 @@ class Painter {
 
         auto src = data + (int)srcPos[1] * width + (int)srcPos[0];
         if (*src & 0xc0)  // alpha > 0 ?
-          rawSetPixelInRow(rawGetRow((int)y + destY), (int)x + destX, *src);
+          ((TPainter*)this)->rawSetPixelInRow(((TPainter*)this)->rawGetRow((int)y + destY), (int)x + destX, *src);
       }
     }
   }
 
 
-  template <typename TRawGetRow, /*typename TRawGetPixelInRow,*/ typename TRawSetPixelInRow /*, typename TBackground */>
+  template <typename TPainter, typename TRawGetRow, /*typename TRawGetPixelInRow,*/ typename TRawSetPixelInRow /*, typename TBackground */>
   void genericRawDrawTransformedBitmap_RGBA8888(int destX, int destY, Rect drawingRect, Bitmap const * bitmap, const float * invMatrix,
                                      TRawGetRow rawGetRow, /* TRawGetPixelInRow rawGetPixelInRow, */ TRawSetPixelInRow rawSetPixelInRow)
   {
@@ -1427,7 +1427,7 @@ class Painter {
 
         auto src = data + (int)srcPos[1] * width + (int)srcPos[0];
         if (src->A)
-          rawSetPixelInRow(rawGetRow((int)y + destY),  (int)x + destX, *src);
+          ((TPainter*)this)->rawSetPixelInRow(((TPainter*)this)->rawGetRow((int)y + destY),  (int)x + destX, *src);
       }
     }
   }
@@ -1436,9 +1436,9 @@ class Painter {
   // Scroll is done copying and filling rows
   // scroll < 0 -> scroll UP
   // scroll > 0 -> scroll DOWN
-  template <typename TRawCopyRow, typename TRawFillRow>
+  template <typename TPainter, typename TRawCopyRow>
   void genericVScroll(int scroll, Rect & updateRect,
-                      TRawCopyRow rawCopyRow, TRawFillRow rawFillRow)
+                      TRawCopyRow rawCopyRow)
   {
     RGB888 color = getActualBrushColor();
     int Y1 = paintState().scrollingRegion.Y1;
@@ -1457,7 +1457,7 @@ class Painter {
       }
       // fill lower area with brush color
       for (int i = height + scroll; i < height; ++i)
-        rawFillRow(Y1 + i, X1, X2, color);
+        fillRow(Y1 + i, X1, X2, color);
 
     } else if (scroll > 0) {
 
@@ -1469,7 +1469,7 @@ class Painter {
 
       // fill upper area with brush color
       for (int i = 0; i < scroll; ++i)
-        rawFillRow(Y1 + i, X1, X2, color);
+        fillRow(Y1 + i, X1, X2, color);
 
     }
   }
@@ -1478,9 +1478,9 @@ class Painter {
   // scroll is done swapping rows and rows pointers
   // scroll < 0 -> scroll UP
   // scroll > 0 -> scroll DOWN
-  template <typename TSwapRowsCopying, typename TSwapRowsPointers, typename TRawFillRow>
+  template <typename TPainter, typename TSwapRowsCopying, typename TSwapRowsPointers>
   void genericVScroll(int scroll, Rect & updateRect,
-                      TSwapRowsCopying swapRowsCopying, TSwapRowsPointers swapRowsPointers, TRawFillRow rawFillRow)
+                      TSwapRowsCopying swapRowsCopying, TSwapRowsPointers swapRowsPointers)
   {
     RGB888 color = getActualBrushColor();
     const int Y1 = paintState().scrollingRegion.Y1;
@@ -1509,7 +1509,7 @@ class Painter {
 
       // fill lower area with brush color
       for (int i = height + scroll; i < height; ++i)
-        rawFillRow(Y1 + i, X1, X2, color);
+        fillRow(Y1 + i, X1, X2, color);
 
     } else if (scroll > 0) {
 
@@ -1528,7 +1528,7 @@ class Painter {
 
       // fill upper area with brush color
       for (int i = 0; i < scroll; ++i)
-        rawFillRow(Y1 + i, X1, X2, color);
+        fillRow(Y1 + i, X1, X2, color);
 
     }
   }
@@ -1537,11 +1537,11 @@ class Painter {
   // Scroll is done copying and filling columns
   // scroll < 0 -> scroll LEFT
   // scroll > 0 -> scroll RIGHT
-  template <typename TPreparePixel, typename TRawGetRow, typename TRawGetPixelInRow, typename TRawSetPixelInRow>
+  template <typename TPainter, typename TPreparePixel, typename TRawGetRow, typename TRawGetPixelInRow, typename TRawSetPixelInRow>
   void genericHScroll(int scroll, Rect & updateRect,
                       TPreparePixel preparePixel, TRawGetRow rawGetRow, TRawGetPixelInRow rawGetPixelInRow, TRawSetPixelInRow rawSetPixelInRow)
   {
-    auto pattern = preparePixel(getActualBrushColor());
+    auto pattern = ((TPainter*)this)->preparePixel(getActualBrushColor());
 
     int Y1 = paintState().scrollingRegion.Y1;
     int Y2 = paintState().scrollingRegion.Y2;
@@ -1551,26 +1551,26 @@ class Painter {
     if (scroll < 0) {
       // scroll left
       for (int y = Y1; y <= Y2; ++y) {
-        auto row = rawGetRow(y);
+        auto row = ((TPainter*)this)->rawGetRow(y);
         for (int x = X1; x <= X2 + scroll; ++x) {
-          auto c = rawGetPixelInRow(row, x - scroll);
-          rawSetPixelInRow(row, x, c);
+          auto c = ((TPainter*)this)->rawGetPixelInRow(row, x - scroll);
+          ((TPainter*)this)->rawSetPixelInRow(row, x, c);
         }
         // fill right area with brush color
         for (int x = X2 + 1 + scroll; x <= X2; ++x)
-          rawSetPixelInRow(row, x, pattern);
+          ((TPainter*)this)->rawSetPixelInRow(row, x, pattern);
       }
     } else if (scroll > 0) {
       // scroll right
       for (int y = Y1; y <= Y2; ++y) {
-        auto row = rawGetRow(y);
+        auto row = ((TPainter*)this)->rawGetRow(y);
         for (int x = X2 - scroll; x >= X1; --x) {
-          auto c = rawGetPixelInRow(row, x);
-          rawSetPixelInRow(row, x + scroll, c);
+          auto c = ((TPainter*)this)->rawGetPixelInRow(row, x);
+          ((TPainter*)this)->rawSetPixelInRow(row, x + scroll, c);
         }
         // fill left area with brush color
         for (int x = X1; x < X1 + scroll; ++x)
-          rawSetPixelInRow(row, x, pattern);
+          ((TPainter*)this)->rawSetPixelInRow(row, x, pattern);
       }
     }
   }

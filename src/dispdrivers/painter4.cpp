@@ -37,60 +37,14 @@
 
 namespace fabgl {
 
-static inline __attribute__((always_inline)) void VGA4_SETPIXELINROW(uint8_t * row, int x, int value) {
-  int brow = x >> 2;
-  int shift = 6 - (x & 3) * 2;
-  row[brow] ^= ((value << shift) ^ row[brow]) & (3 << shift);
-}
-
-static inline __attribute__((always_inline)) int VGA4_GETPIXELINROW(uint8_t * row, int x) {
-  int brow = x >> 2;
-  int shift = 6 - (x & 3) * 2;
-  return (row[brow] >> shift) & 3;
-}
-
-#define VGA4_INVERTPIXELINROW(row, x)       (row)[(x) >> 2] ^= 3 << (6 - ((x) & 3) * 2)
-
-static inline __attribute__((always_inline)) void VGA4_SETPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) sgetScanline(y);
-  int brow = x >> 2;
-  int shift = 6 - (x & 3) * 2;
-  row[brow] ^= ((value << shift) ^ row[brow]) & (3 << shift);
-}
-
-static inline __attribute__((always_inline)) void VGA4_ORPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) sgetScanline(y);
-  int brow = x >> 2;
-  int shift = 6 - (x & 3) * 2;
-  row[brow] |= (value << shift);
-}
-
-static inline __attribute__((always_inline)) void VGA4_ANDPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) sgetScanline(y);
-  int brow = x >> 2;
-  int shift = 6 - (x & 3) * 2;
-  // byte to write needs to have 1s in non-masked bits
-  value = 0xFF ^ (3 << shift) | (value << shift);
-  row[brow] &= value;
-}
-
-static inline __attribute__((always_inline)) void VGA4_XORPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) sgetScanline(y);
-  int brow = x >> 2;
-  int shift = 6 - (x & 3) * 2;
-  row[brow] ^= (value << shift);
-}
-
-#define VGA4_GETPIXEL(x, y)                 VGA4_GETPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
-
-#define VGA4_INVERT_PIXEL(x, y)             VGA4_INVERTPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
-
-#define VGA4_COLUMNSQUANTUM 16
-
 /*************************************************************************************/
 /* Painter4 definitions */
 
 Painter4::Painter4() {
+  setPaletteItem(0, RGB888(0, 0, 0));       // 0: black
+  setPaletteItem(1, RGB888(0, 0, 255));     // 1: blue
+  setPaletteItem(2, RGB888(0, 255, 0));     // 2: green
+  setPaletteItem(3, RGB888(255, 255, 255)); // 3: white
 }
 
 Painter4::~Painter4() {

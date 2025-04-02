@@ -782,4 +782,6 @@ struct PaletteListItem {
 
 bool clipLine(int & x1, int & y1, int & x2, int & y2, Rect const & clipRect, bool checkOnly);
 
+bool getBit(uint8_t* array, size_t bitIndex);
+
 } // fabgl

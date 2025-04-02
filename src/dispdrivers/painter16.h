@@ -117,6 +117,50 @@ class Painter16 : public Painter {
 
   protected:
 
+  // high nibble is pixel 0, low nibble is pixel 1
+
+  inline void VGA16_SETPIXELINROW(uint8_t * row, int x, int value) {
+    int brow = x >> 1;
+    row[brow] = (x & 1) ? ((row[brow] & 0xf0) | value) : ((row[brow] & 0x0f) | (value << 4));
+  }
+
+  inline int VGA16_GETPIXELINROW(uint8_t * row, int x) {
+    int brow = x >> 1;
+    return ((x & 1) ? (row[brow] & 0x0f) : ((row[brow] & 0xf0) >> 4));
+  }
+
+  #define VGA16_INVERTPIXELINROW(row, x)       (row)[(x) >> 1] ^= (0xf0 >> (((x) & 1) << 2))
+
+  inline void VGA16_SETPIXEL(int x, int y, int value) {
+    auto row = (uint8_t*) sgetScanline(y);
+    int brow = x >> 1;
+    row[brow] = (x & 1) ? ((row[brow] & 0xf0) | value) : ((row[brow] & 0x0f) | (value << 4));
+  }
+
+  inline void VGA16_ORPIXEL(int x, int y, int value) {
+    auto row = (uint8_t*) sgetScanline(y);
+    int brow = x >> 1;
+    row[brow] |= (x & 1) ? value : (value << 4);
+  }
+
+  inline void VGA16_ANDPIXEL(int x, int y, int value) {
+    auto row = (uint8_t*) sgetScanline(y);
+    int brow = x >> 1;
+    row[brow] &= (x & 1) ? (value | 0xF0) : ((value << 4) | 0x0F);
+  }
+
+  inline void VGA16_XORPIXEL(int x, int y, int value) {
+    auto row = (uint8_t*) sgetScanline(y);
+    int brow = x >> 1;
+    row[brow] ^= (x & 1) ? value : (value << 4);
+  }
+
+  #define VGA16_GETPIXEL(x, y)                 VGA16_GETPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
+
+  #define VGA16_INVERT_PIXEL(x, y)             VGA16_INVERTPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
+
+  #define VGA16_COLUMNSQUANTUM 16
+
   // methods to get lambdas to get/set pixels
   std::function<uint8_t(RGB888 const &)> getPixelLambda(PaintMode mode);
   std::function<void(int X, int Y, uint8_t colorIndex)> setPixelLambda(PaintMode mode);

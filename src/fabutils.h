@@ -107,9 +107,6 @@ namespace fabgl {
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 
-bool getBit(uint8_t* array, size_t bitIndex);
-
-
 void rgb222_to_hsv(int R, int G, int B, double * h, double * s, double * v);
 
 

@@ -37,35 +37,13 @@
 
 namespace fabgl {
 
-static inline __attribute__((always_inline)) void VGA2_SETPIXELINROW(uint8_t * row, int x, int value) {
-  int brow = x >> 3;
-  row[brow] ^= (-value ^ row[brow]) & (0x80 >> (x & 7));
-}
-
-static inline __attribute__((always_inline)) int VGA2_GETPIXELINROW(uint8_t * row, int x) {
-  int brow = x >> 3;
-  return (row[brow] & (0x80 >> (x & 7))) != 0;
-}
-
-#define VGA2_INVERTPIXELINROW(row, x)       (row)[(x) >> 3] ^= (0x80 >> ((x) & 7))
-
-static inline __attribute__((always_inline)) void VGA2_SETPIXEL(int x, int y, int value) {
-  auto row = (uint8_t*) sgetScanline(y);
-  int brow = x >> 3;
-  row[brow] ^= (-value ^ row[brow]) & (0x80 >> (x & 7));
-}
-
-#define VGA2_GETPIXEL(x, y)                 VGA2_GETPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
-
-#define VGA2_INVERT_PIXEL(x, y)             VGA2_INVERTPIXELINROW((uint8_t*)m_viewPort[(y)], (x))
-
-#define VGA2_COLUMNSQUANTUM 16
-
 /*************************************************************************************/
 /* Painter2 definitions */
 
 
 Painter2::Painter2() {
+  setPaletteItem(0, RGB888(0, 0, 0));       // 0: black
+  setPaletteItem(1, RGB888(255, 255, 255)); // 1: white
 }
 
 Painter2::~Painter2() {
